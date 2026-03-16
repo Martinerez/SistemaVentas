@@ -16,6 +16,10 @@ class Usuario(AbstractBaseUser):
         ('Activo', 'Activo'),
         ('Inactivo', 'Inactivo'),
     )
+    ROL_CHOICES = (
+        ('admin', 'Administrador'),
+        ('vendedor', 'Vendedor'),
+    )
     IdUsuario = models.AutoField(primary_key=True)
     Nombre = models.CharField(max_length=255, null=False, blank=False)
     Email = models.EmailField(unique=True, null=False, blank=False)
@@ -24,6 +28,7 @@ class Usuario(AbstractBaseUser):
     # To be safe but strictly follow schema, DBML has 'Password'.
     # Django will use 'password'. Better to let Django handle it or map it.
     Estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='Activo', null=False, blank=False)
+    Rol = models.CharField(max_length=20, choices=ROL_CHOICES, default='vendedor', null=False, blank=False)
 
     USERNAME_FIELD = 'Email'
     REQUIRED_FIELDS = ['Nombre']

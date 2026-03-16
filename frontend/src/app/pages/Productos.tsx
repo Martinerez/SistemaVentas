@@ -14,7 +14,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card } from "../components/ui/card";
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../api/axiosInstance";
 import {
   Dialog,
   DialogContent,
@@ -100,8 +100,9 @@ export function Productos() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get("http://localhost:8000/api/catalogo/categorias/");
-      setCategories(response.data);
+      const response = await api.get("http://localhost:8000/api/catalogo/categorias/");
+      const data = response.data.results ?? response.data;
+      setCategories(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching categories:", error);
     }
@@ -109,8 +110,9 @@ export function Productos() {
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get("http://localhost:8000/api/catalogo/productos/");
-      setProducts(response.data);
+      const response = await api.get("http://localhost:8000/api/catalogo/productos/");
+      const data = response.data.results ?? response.data;
+      setProducts(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching products:", error);
     }
@@ -143,7 +145,7 @@ export function Productos() {
   const handleConfirmDelete = async () => {
     if (deleteAlert.productId) {
       try {
-        await axios.delete(`http://localhost:8000/api/catalogo/productos/${deleteAlert.productId}/`);
+        await api.delete(`http://localhost:8000/api/catalogo/productos/${deleteAlert.productId}/`);
         setProducts(products.filter((p) => p.id !== deleteAlert.productId));
         setDeleteAlert({
           isOpen: false,
@@ -171,7 +173,7 @@ export function Productos() {
           name: editingProduct.name,
           categoryId: parseInt(editingProduct.categoryId),
         };
-        const response = await axios.patch(
+        const response = await api.patch(
           `http://localhost:8000/api/catalogo/productos/${editingProduct.id}/`,
           payload
         );
@@ -190,7 +192,7 @@ export function Productos() {
         name: newProductName,
         categoryId: parseInt(newProductCategory),
       };
-      await axios.post("http://localhost:8000/api/catalogo/productos/", payload);
+      await api.post("http://localhost:8000/api/catalogo/productos/", payload);
       fetchProducts();
       fetchCategories(); // Update product counts
       setIsAddProductOpen(false);
@@ -208,7 +210,7 @@ export function Productos() {
           name: newCategoryName,
           profitPercentage: parseFloat(newCategoryProfit) || 3,
         };
-        await axios.post("http://localhost:8000/api/catalogo/categorias/", payload);
+        await api.post("http://localhost:8000/api/catalogo/categorias/", payload);
         fetchCategories();
         setIsAddCategoryOpen(false);
         setNewCategoryName("");
@@ -251,7 +253,7 @@ export function Productos() {
           name: editingCategory.name,
           profitPercentage: parseFloat(editingCategory.profitPercentage) || 3,
         };
-        await axios.patch(
+        await api.patch(
           `http://localhost:8000/api/catalogo/categorias/${editingCategory.id}/`,
           payload
         );
@@ -267,7 +269,7 @@ export function Productos() {
   const handleConfirmDeleteCategory = async () => {
     if (deleteCategoryAlert.categoryId) {
       try {
-        await axios.delete(`http://localhost:8000/api/catalogo/categorias/${deleteCategoryAlert.categoryId}/`);
+        await api.delete(`http://localhost:8000/api/catalogo/categorias/${deleteCategoryAlert.categoryId}/`);
         setCategories(
           categories.filter((cat) => cat.id !== deleteCategoryAlert.categoryId),
         );

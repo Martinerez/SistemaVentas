@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { Outlet, NavLink } from "react-router";
+import { Outlet, NavLink, Navigate } from "react-router";
 import {
   LayoutDashboard,
   Package,
-  FolderTree,
   Warehouse,
   ShoppingCart,
   Truck,
@@ -13,84 +12,103 @@ import {
   Menu,
   X,
   Store,
-  Bell,
   User,
+  Briefcase,
+  Users,
+  LogOut,
 } from "lucide-react";
 import { Button } from "./ui/button";
-
-const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: Package, label: "Productos", path: "/productos" },
-  { icon: Truck, label: "Pedidos", path: "/pedidos" },
-  { icon: ShoppingCart, label: "Ventas", path: "/ventas" },
-  { icon: TrendingDown, label: "Pérdidas", path: "/perdidas" },
-  { icon: RefreshCcw, label: "Devoluciones", path: "/devoluciones" },
-  { icon: Settings, label: "Ajustes", path: "/ajustes" },
-];
+import { useAuth } from "../contexts/AuthContext";
 
 export function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { logout, userRole, userName } = useAuth();
+
+  // Menu items available to all roles
+  const commonItems = [
+    { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+    { icon: ShoppingCart, label: "Ventas", path: "/ventas" },
+  ];
+
+  // Menu items only for admin
+  const adminItems = [
+    { icon: Package, label: "Productos", path: "/productos" },
+    { icon: Briefcase, label: "Proveedores", path: "/proveedores" },
+    { icon: Truck, label: "Pedidos", path: "/pedidos" },
+    { icon: TrendingDown, label: "Pérdidas", path: "/perdidas" },
+    { icon: RefreshCcw, label: "Devoluciones", path: "/devoluciones" },
+    { icon: Users, label: "Usuarios", path: "/usuarios" },
+    { icon: Settings, label: "Ajustes", path: "/ajustes" },
+  ];
+
+  const menuItems = userRole === "admin" ? [...commonItems, ...adminItems] : commonItems;
+
+  const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
+    <>
+      <div className={`p-6 border-b ${mobile ? "flex items-center justify-between" : ""}`}>
+        <div className="flex items-center gap-3">
+          <div className="size-10 bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg flex items-center justify-center shadow-lg">
+            <Store className="size-6 text-white" />
+          </div>
+          <div>
+            <h1 className="font-bold text-lg bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+              Bendición de Dios
+            </h1>
+            <p className="text-xs text-gray-500">Sistema de Ventas</p>
+          </div>
+        </div>
+        {mobile && (
+          <button onClick={() => setIsSidebarOpen(false)}>
+            <X className="size-6" />
+          </button>
+        )}
+      </div>
+
+      <nav className="flex-1 overflow-y-auto p-4">
+        <ul className="space-y-1">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <li key={item.path}>
+                <NavLink
+                  to={item.path}
+                  end={item.path === "/"}
+                  onClick={mobile ? () => setIsSidebarOpen(false) : undefined}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                      isActive
+                        ? "bg-gradient-to-r from-slate-700 to-slate-800 text-white font-medium shadow-md"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`
+                  }
+                >
+                  <Icon className="size-5" />
+                  <span>{item.label}</span>
+                </NavLink>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      {/* Logout button at bottom of sidebar */}
+      <div className="p-4 border-t">
+        <button
+          onClick={logout}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors font-medium"
+        >
+          <LogOut className="size-5" />
+          <span>Cerrar Sesión</span>
+        </button>
+      </div>
+    </>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar Desktop */}
       <aside className="hidden md:flex md:flex-col fixed left-0 top-0 h-screen w-64 bg-white border-r shadow-sm z-40">
-        <div className="p-6 border-b">
-          <div className="flex items-center gap-3">
-            <div className="size-10 bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg flex items-center justify-center shadow-lg">
-              <Store className="size-6 text-white" />
-            </div>
-            <div>
-              <h1 className="font-bold text-lg bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                Bendición de Dios
-              </h1>
-              <p className="text-xs text-gray-500">Sistema de Ventas</p>
-            </div>
-          </div>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto p-4">
-          <ul className="space-y-1">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <li key={item.path}>
-                  <NavLink
-                    to={item.path}
-                    end={item.path === "/"}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                        isActive
-                          ? "bg-gradient-to-r from-slate-700 to-slate-800 text-white font-medium shadow-md"
-                          : "text-gray-700 hover:bg-gray-100"
-                      }`
-                    }
-                  >
-                    <Icon className="size-5" />
-                    <span>{item.label}</span>
-                  </NavLink>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-
-        <div className="p-4 border-t">
-          <div className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-lg p-4 border border-slate-200">
-            <p className="text-sm font-medium text-gray-900 mb-1">
-              ¿Necesitas ayuda?
-            </p>
-            <p className="text-xs text-gray-600 mb-3">
-              Consulta nuestra guía de usuario
-            </p>
-            <Button
-              size="sm"
-              className="w-full bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900"
-            >
-              Ver guía
-            </Button>
-          </div>
-        </div>
+        <SidebarContent />
       </aside>
 
       {/* Sidebar Mobile */}
@@ -100,52 +118,10 @@ export function DashboardLayout() {
           onClick={() => setIsSidebarOpen(false)}
         >
           <aside
-            className="fixed left-0 top-0 h-screen w-64 bg-white shadow-lg"
+            className="fixed left-0 top-0 h-screen w-64 bg-white shadow-lg flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="size-10 bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg flex items-center justify-center shadow-lg">
-                  <Store className="size-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="font-bold text-lg bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                    Bendición de Dios
-                  </h1>
-                  <p className="text-xs text-gray-500">Sistema de Ventas</p>
-                </div>
-              </div>
-              <button onClick={() => setIsSidebarOpen(false)}>
-                <X className="size-6" />
-              </button>
-            </div>
-
-            <nav className="p-4 overflow-y-auto h-[calc(100vh-100px)]">
-              <ul className="space-y-1">
-                {menuItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <li key={item.path}>
-                      <NavLink
-                        to={item.path}
-                        end={item.path === "/"}
-                        onClick={() => setIsSidebarOpen(false)}
-                        className={({ isActive }) =>
-                          `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                            isActive
-                              ? "bg-gradient-to-r from-slate-700 to-slate-800 text-white font-medium shadow-md"
-                              : "text-gray-700 hover:bg-gray-100"
-                          }`
-                        }
-                      >
-                        <Icon className="size-5" />
-                        <span>{item.label}</span>
-                      </NavLink>
-                    </li>
-                  );
-                })}
-              </ul>
-            </nav>
+            <SidebarContent mobile />
           </aside>
         </div>
       )}
@@ -171,14 +147,10 @@ export function DashboardLayout() {
             </div>
 
             <div className="flex items-center gap-3">
-              <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <Bell className="size-5 text-gray-600" />
-                <span className="absolute top-1 right-1 size-2 bg-red-500 rounded-full"></span>
-              </button>
               <div className="flex items-center gap-3 pl-3 border-l">
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm font-medium text-slate-800">Admin</p>
-                  <p className="text-xs text-gray-500">admin@miscelanea.com</p>
+                  <p className="text-sm font-medium text-slate-800">{userName || "Usuario"}</p>
+                  <p className="text-xs font-semibold capitalize px-2 py-0.5 rounded-full inline-block mt-0.5 bg-slate-100 text-slate-600">{userRole || ""}</p>
                 </div>
                 <div className="size-10 bg-gradient-to-br from-slate-700 to-slate-900 rounded-full flex items-center justify-center shadow-md">
                   <User className="size-5 text-white" />

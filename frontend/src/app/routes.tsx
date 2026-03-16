@@ -7,19 +7,43 @@ import { Pedidos } from "./pages/Pedidos";
 import { Perdidas } from "./pages/Perdidas";
 import { Devoluciones } from "./pages/Devoluciones";
 import { Ajustes } from "./pages/Ajustes";
+import { Proveedores } from "./pages/Proveedores";
+import { Login } from "./pages/Login";
+import { GestionUsuarios } from "./pages/GestionUsuarios";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "./components/AdminRoute";
 
 export const router = createBrowserRouter([
   {
+    path: "/login",
+    Component: Login,
+  },
+  {
     path: "/",
-    Component: DashboardLayout,
+    Component: ProtectedRoute,
     children: [
-      { index: true, Component: Dashboard },
-      { path: "productos", Component: Productos },
-      { path: "ventas", Component: Ventas },
-      { path: "pedidos", Component: Pedidos },
-      { path: "perdidas", Component: Perdidas },
-      { path: "devoluciones", Component: Devoluciones },
-      { path: "ajustes", Component: Ajustes },
+      {
+        path: "/",
+        Component: DashboardLayout,
+        children: [
+          { index: true, Component: Dashboard },
+          { path: "productos", Component: Productos },
+          { path: "proveedores", Component: Proveedores },
+          { path: "ventas", Component: Ventas },
+          { path: "pedidos", Component: Pedidos },
+          { path: "perdidas", Component: Perdidas },
+          { path: "devoluciones", Component: Devoluciones },
+          { path: "ajustes", Component: Ajustes },
+          // ── Admin-only routes ──────────────────────────────
+          {
+            path: "usuarios",
+            Component: AdminRoute,
+            children: [
+              { index: true, Component: GestionUsuarios },
+            ],
+          },
+        ],
+      },
     ],
   },
 ]);

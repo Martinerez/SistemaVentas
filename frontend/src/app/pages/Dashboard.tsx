@@ -8,63 +8,85 @@ import {
   ShoppingCart,
   ArrowUpRight,
   ArrowDownRight,
+  Loader2
 } from "lucide-react";
 import { Card } from "../components/ui/card";
-
-const stats = [
-  {
-    icon: Package,
-    label: "Total de Productos",
-    value: "1,234",
-    change: "+12%",
-    trend: "up",
-    color: "slate",
-  },
-  {
-    icon: DollarSign,
-    label: "Ventas Semanales",
-    value: "$45,678",
-    change: "+23%",
-    trend: "up",
-    color: "green",
-  },
-  {
-    icon: TrendingDown,
-    label: "Pérdidas del Mes",
-    value: "$1,234",
-    change: "-5%",
-    trend: "down",
-    color: "red",
-  },
-  {
-    icon: Truck,
-    label: "Proveedores Activos",
-    value: "24",
-    change: "+2",
-    trend: "up",
-    color: "blue",
-  },
-];
-
-const lowStockProducts = [
-  { id: 1, name: "Coca-Cola 600ml", stock: 5, min: 20, category: "Bebidas" },
-  { id: 2, name: "Pan Bimbo Blanco", stock: 8, min: 30, category: "Panadería" },
-  { id: 3, name: "Sabritas Original", stock: 12, min: 25, category: "Botanas" },
-  { id: 4, name: "Papel Higiénico", stock: 3, min: 15, category: "Limpieza" },
-  { id: 5, name: "Leche Lala 1L", stock: 6, min: 20, category: "Lácteos" },
-];
-
-const recentSales = [
-  { id: 1, time: "10:30 AM", items: 5, total: "$156.50" },
-  { id: 2, time: "10:15 AM", items: 3, total: "$89.20" },
-  { id: 3, time: "09:45 AM", items: 8, total: "$234.75" },
-  { id: 4, time: "09:20 AM", items: 2, total: "$45.00" },
-  { id: 5, time: "08:55 AM", items: 6, total: "$178.90" },
-];
+import { useState, useEffect } from "react";
+import api from "../api/axiosInstance";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export function Dashboard() {
+  const [loading, setLoading] = useState(true);
+  const [statsData, setStatsData] = useState<any>(null);
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
+
+  const fetchDashboardStats = async () => {
+    try {
+      const { data } = await api.get("http://localhost:8000/api/ventas/dashboard/stats/");
+      setStatsData(data);
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading || !statsData) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
+        <Loader2 className="size-12 animate-spin text-green-600" />
+        <p className="text-gray-500 font-medium">Calculando métricas del negocio...</p>
+      </div>
+    );
+  }
+
+  const { totalProducts, weeklySales, totalProveedores, lowStockItems, recentSales, chartData } = statsData;
+
+  const stats = [
+    {
+      icon: Package,
+      label: "Total de Productos",
+      value: totalProducts,
+      change: "Items en Catálogo",
+      trend: "up",
+      color: "slate",
+    },
+    {
+      icon: DollarSign,
+      label: "Ventas Semanales",
+      value: `$${weeklySales.toFixed(2)}`,
+      change: "Últimos 7 días",
+      trend: "up",
+      color: "green",
+    },
+    {
+      icon: TrendingDown,
+      label: "Pérdidas del Mes",
+      value: "Pendiente",
+      change: "Módulo en desarrollo",
+      trend: "down",
+      color: "red",
+    },
+    {
+      icon: Truck,
+      label: "Proveedores Activos",
+      value: totalProveedores,
+      change: "Alianzas",
+      trend: "up",
+      color: "blue",
+    },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-800">Panel de Control General</h1>
+        <p className="text-gray-600">Resumen y estado de tu negocio al día de hoy</p>
+      </div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => {
@@ -72,8 +94,8 @@ export function Dashboard() {
           const colorClasses = {
             slate: "from-slate-600 to-slate-800",
             green: "from-green-500 to-green-700",
-            red: "from-red-500 to-red-700",
-            blue: "from-blue-800 to-slate-900",
+            red: "from-red-400 to-red-600",
+            blue: "from-blue-700 to-blue-900",
           }[stat.color];
 
           return (
@@ -86,7 +108,7 @@ export function Dashboard() {
                 </div>
                 <div
                   className={`flex items-center gap-1 text-sm font-semibold ${
-                    stat.trend === "up" ? "text-green-600" : "text-red-600"
+                    stat.trend === "up" ? "text-green-600" : "text-gray-400"
                   }`}
                 >
                   {stat.trend === "up" ? (
@@ -104,6 +126,37 @@ export function Dashboard() {
         })}
       </div>
 
+      {/* Chart Section */}
+      <Card className="p-6 border-0 shadow-lg">
+        <div className="mb-6">
+          <h3 className="font-bold text-lg text-slate-800">Tendencia de Ventas</h3>
+          <p className="text-sm text-gray-500">Ingresos generados en la última semana</p>
+        </div>
+        <div className="h-[300px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} dx={-10} tickFormatter={(value) => `$${value}`} />
+              <Tooltip 
+                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
+                itemStyle={{ color: '#166534', fontWeight: 'bold' }}
+                cursor={{ stroke: '#16a34a', strokeWidth: 1, strokeDasharray: '3 3' }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="total" 
+                stroke="#16a34a" 
+                strokeWidth={3}
+                dot={{ r: 4, fill: '#16a34a', strokeWidth: 2, stroke: '#fff' }}
+                activeDot={{ r: 6, strokeWidth: 0 }}
+                name="Ventas ($)"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Productos con Stock Bajo */}
         <Card className="p-6 border-0 shadow-lg">
@@ -115,20 +168,20 @@ export function Dashboard() {
               <div>
                 <h3 className="font-bold text-lg text-slate-800">Productos con Stock Bajo</h3>
                 <p className="text-sm text-gray-500">
-                  Requieren reabastecimiento
+                  Requieren reabastecimiento urgente ({'< 10'} unidades)
                 </p>
               </div>
             </div>
             <span className="px-3 py-1 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-full text-sm font-semibold shadow-sm">
-              {lowStockProducts.length}
+              {lowStockItems.length}
             </span>
           </div>
 
           <div className="space-y-3">
-            {lowStockProducts.map((product) => (
+            {lowStockItems.length > 0 ? lowStockItems.map((product: any) => (
               <div
                 key={product.id}
-                className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl hover:shadow-md transition-all duration-200 border border-gray-200"
+                className="flex items-center justify-between p-4 bg-gradient-to-r from-red-50 to-white rounded-xl hover:shadow-md transition-all duration-200 border border-red-100"
               >
                 <div className="flex-1">
                   <p className="font-semibold text-sm text-slate-800">{product.name}</p>
@@ -138,12 +191,13 @@ export function Dashboard() {
                   <p className="text-sm font-bold text-red-600">
                     {product.stock} unidades
                   </p>
-                  <p className="text-xs text-gray-500">
-                    Mín: {product.min}
-                  </p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-8 text-gray-500 border border-dashed rounded-xl">
+                 No hay productos con stock bajo 🎉
+              </div>
+            )}
           </div>
         </Card>
 
@@ -156,72 +210,41 @@ export function Dashboard() {
               </div>
               <div>
                 <h3 className="font-bold text-lg text-slate-800">Ventas Recientes</h3>
-                <p className="text-sm text-gray-500">Últimas transacciones</p>
+                <p className="text-sm text-gray-500">Últimas transacciones completadas</p>
               </div>
             </div>
           </div>
 
           <div className="space-y-3">
-            {recentSales.map((sale) => (
+            {recentSales.length > 0 ? recentSales.map((sale: any) => (
               <div
                 key={sale.id}
-                className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl hover:shadow-md transition-all duration-200 border border-gray-200"
+                className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-white rounded-xl hover:shadow-md transition-all duration-200 border border-green-50"
               >
                 <div className="flex items-center gap-3">
-                  <div className="size-10 bg-gradient-to-br from-green-500 to-green-700 rounded-xl flex items-center justify-center shadow-md">
-                    <TrendingUp className="size-5 text-white" />
+                  <div className="size-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md text-white font-bold text-sm">
+                    #{sale.id}
                   </div>
                   <div>
                     <p className="font-semibold text-sm text-slate-800">
-                      Venta #{sale.id.toString().padStart(4, "0")}
+                      Ticket Venta
                     </p>
                     <p className="text-xs text-gray-500">{sale.time}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-sm text-slate-800">{sale.total}</p>
+                  <p className="font-bold text-sm text-green-700">{sale.total}</p>
                   <p className="text-xs text-gray-500">{sale.items} items</p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-8 text-gray-500 border border-dashed rounded-xl">
+                 Aún no hay ventas registradas.
+              </div>
+            )}
           </div>
         </Card>
       </div>
-
-      {/* Quick Actions */}
-      <Card className="p-6 border-0 shadow-lg">
-        <h3 className="font-bold text-lg mb-4 text-slate-800">Acciones Rápidas</h3>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <button className="p-4 bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 rounded-xl hover:shadow-lg hover:border-slate-300 transition-all duration-200 text-left group">
-            <div className="size-12 bg-gradient-to-br from-slate-600 to-slate-800 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-md">
-              <Package className="size-6 text-white" />
-            </div>
-            <p className="font-semibold text-sm text-slate-800">Agregar Producto</p>
-            <p className="text-xs text-gray-600">Nuevo producto al inventario</p>
-          </button>
-          <button className="p-4 bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-xl hover:shadow-lg hover:border-green-300 transition-all duration-200 text-left group">
-            <div className="size-12 bg-gradient-to-br from-green-500 to-green-700 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-md">
-              <ShoppingCart className="size-6 text-white" />
-            </div>
-            <p className="font-semibold text-sm text-slate-800">Nueva Venta</p>
-            <p className="text-xs text-gray-600">Registrar venta</p>
-          </button>
-          <button className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl hover:shadow-lg hover:border-blue-300 transition-all duration-200 text-left group">
-            <div className="size-12 bg-gradient-to-br from-blue-800 to-slate-900 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-md">
-              <Truck className="size-6 text-white" />
-            </div>
-            <p className="font-semibold text-sm text-slate-800">Nuevo Proveedor</p>
-            <p className="text-xs text-gray-600">Agregar proveedor</p>
-          </button>
-          <button className="p-4 bg-gradient-to-br from-red-50 to-red-100 border-2 border-red-200 rounded-xl hover:shadow-lg hover:border-red-300 transition-all duration-200 text-left group">
-            <div className="size-12 bg-gradient-to-br from-red-500 to-red-700 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-md">
-              <TrendingDown className="size-6 text-white" />
-            </div>
-            <p className="font-semibold text-sm text-slate-800">Reportar Pérdida</p>
-            <p className="text-xs text-gray-600">Registrar pérdida o merma</p>
-          </button>
-        </div>
-      </Card>
     </div>
   );
 }
