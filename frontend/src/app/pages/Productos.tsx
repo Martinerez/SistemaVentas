@@ -14,6 +14,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card } from "../components/ui/card";
 import { useState, useEffect } from "react";
+import axios from "axios";
 import {
   Dialog,
   DialogContent,
@@ -47,39 +48,9 @@ import {
   TableRow,
 } from "../components/ui/table";
 
-// Datos de ejemplo
-const initialCategories = [
-  { id: 1, name: "Perfumes", productCount: 15, profitPercentage: 5 },
-  { id: 2, name: "Refrescos", productCount: 28, profitPercentage: 3 },
-  { id: 3, name: "Cereales", productCount: 12, profitPercentage: 2.5 },
-  { id: 4, name: "Lácteos", productCount: 18, profitPercentage: 3 },
-  { id: 5, name: "Botanas", productCount: 22, profitPercentage: 4 },
-  { id: 6, name: "Limpieza", productCount: 16, profitPercentage: 3 },
-];
-
-const initialProducts = [
-  { id: 1, name: "Leche Parmalat", categoryId: 4, stock: 2, salePrice: 28.5 },
-  { id: 2, name: "Leche Eskimo", categoryId: 4, stock: 0, salePrice: 25.0 },
-  { id: 3, name: "Yogurt Natural", categoryId: 4, stock: 10, salePrice: 15.0 },
-  { id: 4, name: "Queso Panela", categoryId: 4, stock: 5, salePrice: 45.0 },
-  { id: 5, name: "Coca-Cola 600ml", categoryId: 2, stock: 24, salePrice: 18.0 },
-  { id: 6, name: "Pepsi 2L", categoryId: 2, stock: 15, salePrice: 35.0 },
-  { id: 7, name: "Sprite 600ml", categoryId: 2, stock: 18, salePrice: 17.5 },
-  {
-    id: 8,
-    name: "Sabritas Original",
-    categoryId: 5,
-    stock: 30,
-    salePrice: 22.0,
-  },
-  { id: 9, name: "Doritos Nacho", categoryId: 5, stock: 25, salePrice: 25.0 },
-  { id: 10, name: "Chanel No. 5", categoryId: 1, stock: 3, salePrice: 1500.0 },
-  { id: 11, name: "Dior Sauvage", categoryId: 1, stock: 2, salePrice: 1800.0 },
-];
-
 export function Productos() {
-  const [categories, setCategories] = useState(initialCategories);
-  const [products, setProducts] = useState(initialProducts);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
 
   // Estados para modales
@@ -127,7 +98,28 @@ export function Productos() {
     category.name.toLowerCase().includes(searchCategory.toLowerCase()),
   );
 
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get("http://localhost:8000/api/catalogo/categorias/");
+      setCategories(response.data);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const response = await axios.get("http://localhost:8000/api/catalogo/productos/");
+      setProducts(response.data);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    }
+  };
+
   useEffect(() => {
+    fetchCategories();
+    fetchProducts();
+
     const handleBack = () => {
       setSelectedCategory(null);
     };
@@ -148,17 +140,22 @@ export function Productos() {
     });
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deleteAlert.productId) {
-      setProducts(products.filter((p) => p.id !== deleteAlert.productId));
-      setDeleteAlert({
-        isOpen: false,
-        productId: null,
-        productName: "",
-        hasStock: false,
-      });
-      setSuccessMessage(true);
-      setTimeout(() => setSuccessMessage(false), 3000);
+      try {
+        await axios.delete(`http://localhost:8000/api/catalogo/productos/${deleteAlert.productId}/`);
+        setProducts(products.filter((p) => p.id !== deleteAlert.productId));
+        setDeleteAlert({
+          isOpen: false,
+          productId: null,
+          productName: "",
+          hasStock: false,
+        });
+        setSuccessMessage(true);
+        setTimeout(() => setSuccessMessage(false), 3000);
+      } catch (error) {
+        console.error("Error deleting product:", error);
+      }
     }
   };
 
@@ -167,59 +164,58 @@ export function Productos() {
     setIsEditProductOpen(true);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editingProduct) {
-      setProducts(
-        products.map((p) =>
-          p.id === editingProduct.id
-            ? {
-                ...p,
-                name: editingProduct.name,
-                categoryId: parseInt(editingProduct.categoryId),
-              }
-            : p,
-        ),
-      );
-      setIsEditProductOpen(false);
-      setEditingProduct(null);
+      try {
+        const payload = {
+          name: editingProduct.name,
+          categoryId: parseInt(editingProduct.categoryId),
+        };
+        const response = await axios.patch(
+          `http://localhost:8000/api/catalogo/productos/${editingProduct.id}/`,
+          payload
+        );
+        fetchProducts(); // Refresh to get calculated fields like stock/price
+        setIsEditProductOpen(false);
+        setEditingProduct(null);
+      } catch (error) {
+        console.error("Error updating product:", error);
+      }
     }
   };
 
-  const handleAddProduct = () => {
-    const newProduct = {
-      id: products.length + 1,
-      name: newProductName,
-      categoryId: parseInt(newProductCategory),
-      stock: Math.floor(Math.random() * 30),
-    };
-    setProducts([...products, newProduct]);
-
-    // Actualizar contador de productos en categoría
-    setCategories(
-      categories.map((cat) =>
-        cat.id === newProduct.categoryId
-          ? { ...cat, productCount: cat.productCount + 1 }
-          : cat,
-      ),
-    );
-
-    setIsAddProductOpen(false);
-    setNewProductName("Refresco Cola");
-    setNewProductCategory("2");
+  const handleAddProduct = async () => {
+    try {
+      const payload = {
+        name: newProductName,
+        categoryId: parseInt(newProductCategory),
+      };
+      await axios.post("http://localhost:8000/api/catalogo/productos/", payload);
+      fetchProducts();
+      fetchCategories(); // Update product counts
+      setIsAddProductOpen(false);
+      setNewProductName("Refresco Cola");
+      setNewProductCategory("2");
+    } catch (error) {
+      console.error("Error adding product:", error);
+    }
   };
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (newCategoryName.trim()) {
-      const newCategory = {
-        id: categories.length + 1,
-        name: newCategoryName,
-        productCount: 0,
-        profitPercentage: parseFloat(newCategoryProfit) || 3,
-      };
-      setCategories([...categories, newCategory]);
-      setIsAddCategoryOpen(false);
-      setNewCategoryName("");
-      setNewCategoryProfit("3");
+      try {
+        const payload = {
+          name: newCategoryName,
+          profitPercentage: parseFloat(newCategoryProfit) || 3,
+        };
+        await axios.post("http://localhost:8000/api/catalogo/categorias/", payload);
+        fetchCategories();
+        setIsAddCategoryOpen(false);
+        setNewCategoryName("");
+        setNewCategoryProfit("3");
+      } catch (error) {
+        console.error("Error adding category:", error);
+      }
     }
   };
 
@@ -248,38 +244,44 @@ export function Productos() {
     }
   };
 
-  const handleSaveEditCategory = () => {
+  const handleSaveEditCategory = async () => {
     if (editingCategory) {
-      setCategories(
-        categories.map((cat) =>
-          cat.id === editingCategory.id
-            ? {
-                ...cat,
-                name: editingCategory.name,
-                profitPercentage:
-                  parseFloat(editingCategory.profitPercentage) || 3,
-              }
-            : cat,
-        ),
-      );
-      setIsEditCategoryOpen(false);
-      setEditingCategory(null);
+      try {
+        const payload = {
+          name: editingCategory.name,
+          profitPercentage: parseFloat(editingCategory.profitPercentage) || 3,
+        };
+        await axios.patch(
+          `http://localhost:8000/api/catalogo/categorias/${editingCategory.id}/`,
+          payload
+        );
+        fetchCategories();
+        setIsEditCategoryOpen(false);
+        setEditingCategory(null);
+      } catch (error) {
+        console.error("Error editing category:", error);
+      }
     }
   };
 
-  const handleConfirmDeleteCategory = () => {
+  const handleConfirmDeleteCategory = async () => {
     if (deleteCategoryAlert.categoryId) {
-      setCategories(
-        categories.filter((cat) => cat.id !== deleteCategoryAlert.categoryId),
-      );
-      setDeleteCategoryAlert({
-        isOpen: false,
-        categoryId: null,
-        categoryName: "",
-        hasProducts: false,
-      });
-      setSuccessMessage(true);
-      setTimeout(() => setSuccessMessage(false), 3000);
+      try {
+        await axios.delete(`http://localhost:8000/api/catalogo/categorias/${deleteCategoryAlert.categoryId}/`);
+        setCategories(
+          categories.filter((cat) => cat.id !== deleteCategoryAlert.categoryId),
+        );
+        setDeleteCategoryAlert({
+          isOpen: false,
+          categoryId: null,
+          categoryName: "",
+          hasProducts: false,
+        });
+        setSuccessMessage(true);
+        setTimeout(() => setSuccessMessage(false), 3000);
+      } catch (error) {
+        console.error("Error deleting category:", error);
+      }
     }
   };
 
