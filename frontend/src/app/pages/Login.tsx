@@ -24,8 +24,9 @@ export function Login() {
 
     setIsLoading(true);
     try {
+     const cleanEmail = email.toLowerCase().trim();
       const response = await axios.post("http://localhost:8000/api/token/", {
-        Email: email,
+        Email: cleanEmail,
         password: password
       });
       

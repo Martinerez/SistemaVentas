@@ -271,7 +271,7 @@ export function GuiaUsuario(): React.JSX.Element {
       `}</style>
 
       <div className="manual-header">
-        <h1>Centro de Ayuda</h1>
+        <h1>Bienvenido a la guía de usuario</h1>
         <p>Aprende a utilizar las herramientas de tu sistema</p>
       </div>
 

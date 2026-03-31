@@ -5,69 +5,81 @@ import { Label } from "../components/ui/label";
 import { useState, useEffect } from "react";
 import api from "../api/axiosInstance";
 import { toast } from "sonner";
-import { Loader2, Save, Eye, EyeOff, Mail } from "lucide-react";
+import { Loader2, Save, Eye, EyeOff, Mail, User } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
 export function Ajustes() {
   const { userId } = useAuth();
 
-  //PASSWORD
+  // DATOS DEL USUARIO
+  const [userData, setUserData] = useState<any>(null);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
+  // PASSWORD
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
 
-  //EMAIL
+  // EMAIL
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
 
-  //VALIDACIÓN PASSWORD
+  // CARGAR DATOS DEL USUARIO
+  const fetchUserData = async () => {
+    try {
+      setIsLoadingData(true);
+      const response = await api.get(`/usuarios/usuarios/${userId}/`);
+      setUserData(response.data);
+    } catch (error) {
+      console.error("Error al obtener datos del usuario:", error);
+      toast.error("No se pudieron cargar los datos del perfil");
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
+  useEffect(() => {
+    if (userId) {
+      fetchUserData();
+    }
+  }, [userId]);
+
+  // VALIDACIÓN PASSWORD
   const validatePassword = (pwd: string) => {
     const errors: string[] = [];
-
     if (pwd.length < 8) errors.push("Mínimo 8 caracteres");
     if (!/[A-Z]/.test(pwd)) errors.push("Una mayúscula");
     if (!/[a-z]/.test(pwd)) errors.push("Una minúscula");
     if (!/[0-9]/.test(pwd)) errors.push("Un número");
     if (!/[^A-Za-z0-9]/.test(pwd)) errors.push("Un carácter especial");
-
     return errors;
   };
 
+  const getErrorMessage = (error: any): string => {
+    const data = error.response?.data;
+    if (!data) return "Error inesperado";
 
-const getErrorMessage = (error: any): string => {
-  const data = error.response?.data;
-
-  if (!data) return "Error inesperado";
-
-  // Caso: { email: ["mensaje"] }
-  const firstKey = Object.keys(data)[0];
-
-  if (Array.isArray(data[firstKey])) {
-    return data[firstKey][0];
-  }
-
-  // Caso: { email: "mensaje" }
-  if (typeof data[firstKey] === "string") {
-    return data[firstKey];
-  }
-
-  // Caso: { detail: "mensaje" }
-  if (data.detail) {
-    return data.detail;
-  }
-
-  return "Error al procesar la solicitud";
-};
-
+    const firstKey = Object.keys(data)[0];
+    if (Array.isArray(data[firstKey])) {
+      return data[firstKey][0];
+    }
+    if (typeof data[firstKey] === "string") {
+      return data[firstKey];
+    }
+    if (data.detail) {
+      return data.detail;
+    }
+    return "Error al procesar la solicitud";
+  };
 
   useEffect(() => {
     setPasswordErrors(password ? validatePassword(password) : []);
   }, [password]);
 
-  //VALIDACIÓN EMAIL
+  // VALIDACIÓN EMAIL
   const validateEmail = (mail: string) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(mail);
@@ -75,7 +87,6 @@ const getErrorMessage = (error: any): string => {
 
   const handleEmailChange = (value: string) => {
     setEmail(value);
-
     if (!validateEmail(value)) {
       setEmailError("Correo no válido");
     } else {
@@ -83,18 +94,16 @@ const getErrorMessage = (error: any): string => {
     }
   };
 
-  //CAMBIAR CONTRASEÑA
+  // CAMBIAR CONTRASEÑA
   const handlePasswordChange = async () => {
     if (!password || !confirmPassword) {
       toast.warning("Completa todos los campos.");
       return;
     }
-
     if (passwordErrors.length > 0) {
       toast.error("La contraseña no cumple los requisitos.");
       return;
     }
-
     if (password !== confirmPassword) {
       toast.error("Las contraseñas no coinciden.");
       return;
@@ -108,25 +117,22 @@ const getErrorMessage = (error: any): string => {
       });
 
       toast.success("Contraseña actualizada correctamente");
-
       setPassword("");
       setConfirmPassword("");
-
     } catch (error: any) {
-  console.error(error);
-  toast.error(getErrorMessage(error));
+      console.error(error);
+      toast.error(getErrorMessage(error));
     } finally {
       setIsSubmittingPassword(false);
     }
   };
 
-  //CAMBIO DIRECTO DE EMAIL (SIN VERIFICACIÓN)
+  // CAMBIO DIRECTO DE EMAIL
   const handleEmailUpdate = async () => {
     if (!email) {
       toast.warning("Ingresa un correo.");
       return;
     }
-
     if (!validateEmail(email)) {
       toast.error("Correo inválido.");
       return;
@@ -135,40 +141,67 @@ const getErrorMessage = (error: any): string => {
     setIsSubmittingEmail(true);
 
     try {
-      // PATCH directo al usuario para actualizar el email
       await api.patch(`/usuarios/usuarios/${userId}/`, {
-        email: email, 
+        email: email,
       });
 
       toast.success("Correo actualizado correctamente");
-
       setEmail("");
-
-    } 
-    catch (error: any) {
-  console.error(error);
-  toast.error(getErrorMessage(error));
-
+      
+      // Refrescamos los datos para que la tarjeta de perfil muestre el nuevo correo
+      fetchUserData(); 
+    } catch (error: any) {
+      console.error(error);
+      toast.error(getErrorMessage(error));
     } finally {
       setIsSubmittingEmail(false);
     }
-    
   };
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <h1 className="text-2xl font-bold text-slate-800 dark:text-white">
-       Ajustes
+        Ajustes
       </h1>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      {/* TARJETA DE DATOS DEL PERFIL */}
+      <Card className="p-6 rounded-2xl shadow-md dark:bg-slate-900 dark:border dark:border-slate-800">
+        <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+          <User size={18} /> Datos del Perfil
+        </h3>
+        
+        {isLoadingData ? (
+          <div className="flex justify-center items-center p-6">
+            <Loader2 className="animate-spin text-slate-500" />
+          </div>
+        ) : userData ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label className="text-slate-500 dark:text-slate-400">Correo</Label>
+              <p className="font-medium text-slate-900 dark:text-slate-100 mt-1">
+                {userData.email || "No especificado"}
+              </p>
+            </div>
 
-        {/*PASSWORD */}
+            <div>
+              <Label className="text-slate-500 dark:text-slate-400">Rol</Label>
+              <p className="font-medium text-slate-900 dark:text-slate-100 mt-1 capitalize">
+                {/* Ajusta este campo según como retorne el rol tu backend de Django (ej: userData.rol, userData.groups[0]?.name, etc) */}
+                {userData.rol || userData.role || (userData.is_superuser ? "Administrador" : "Vendedor") || "No especificado"}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-slate-500 text-sm">No se encontró información del usuario.</p>
+        )}
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* PASSWORD */}
         <Card className="p-6 rounded-2xl shadow-md dark:bg-slate-900 dark:border dark:border-slate-800">
           <h3 className="font-bold text-lg mb-4">Cambio de contraseña</h3>
 
           <div className="space-y-4">
-
             <div>
               <Label>Nueva Contraseña</Label>
               <div className="relative">
@@ -180,7 +213,7 @@ const getErrorMessage = (error: any): string => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -231,14 +264,13 @@ const getErrorMessage = (error: any): string => {
           </div>
         </Card>
 
-        {/*EMAIL */}
+        {/* EMAIL */}
         <Card className="p-6 rounded-2xl shadow-md dark:bg-slate-900 dark:border dark:border-slate-800">
           <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-            <Mail size={18} /> Actualización/Cambio de correo electrónico
+            <Mail size={18} /> Cambio de correo electrónico
           </h3>
 
           <div className="space-y-4">
-
             <div>
               <Label>Nuevo correo</Label>
               <Input
@@ -265,11 +297,8 @@ const getErrorMessage = (error: any): string => {
               )}
               Cambiar correo
             </Button>
-
-            
           </div>
         </Card>
-
       </div>
     </div>
   );
