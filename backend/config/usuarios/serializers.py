@@ -44,11 +44,19 @@ class UsuarioSerializer(serializers.ModelSerializer):
         return instance
     
     def validate_email(self, value):
+        #Limpiamos el correo que viene del frontend
         value = value.lower().strip()
 
+        #VALIDACIÓN NUEVA: Si estamos actualizando, verificamos que no sea el mismo correo
+        if self.instance and self.instance.Email:
+            correo_actual = self.instance.Email.lower().strip()
+            if correo_actual == value:
+                raise serializers.ValidationError("El nuevo correo no puede ser igual al actual")
+
+        #Validación de que no lo esté usando otra persona
         user_id = self.instance.IdUsuario if self.instance else None
 
-        if Usuario.objects.filter(Email=value).exclude(IdUsuario=user_id).exists():
+        if Usuario.objects.filter(Email__iexact=value).exclude(IdUsuario=user_id).exists():
            raise serializers.ValidationError("Este correo ya está en uso")
 
         return value
