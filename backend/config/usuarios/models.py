@@ -1,3 +1,4 @@
+import uuid 
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 
@@ -30,6 +31,11 @@ class Usuario(AbstractBaseUser):
     Estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='Activo', null=False, blank=False)
     Rol = models.CharField(max_length=20, choices=ROL_CHOICES, default='vendedor', null=False, blank=False)
 
+     #CAMPOS DE VERIFICACIÓN DE EMAIL
+    EmailPendiente = models.EmailField(null=True, blank=True)
+    TokenVerificacion = models.UUIDField(null=True, blank=True)
+
+    
     USERNAME_FIELD = 'Email'
     REQUIRED_FIELDS = ['Nombre']
 

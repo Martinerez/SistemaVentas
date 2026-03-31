@@ -9,6 +9,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
     estado = serializers.CharField(source='Estado')
     rol = serializers.CharField(source='Rol', required=False)
 
+
     class Meta:
         model = Usuario
         fields = ['id', 'nombre', 'email', 'password', 'estado', 'rol']
@@ -26,12 +27,28 @@ class UsuarioSerializer(serializers.ModelSerializer):
         return user
 
     def update(self, instance, validated_data):
-        if 'Password' in validated_data:
-            password = validated_data.pop('Password')
-            instance.set_password(password)
-        
+        password = validated_data.pop('Password', None)
+
+        if password:
+           if instance.check_password(password):
+            raise serializers.ValidationError({
+                "password": "La nueva contraseña no puede ser igual a la actual"
+            })
+
+           instance.set_password(password)
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        
+
         instance.save()
         return instance
+    
+    def validate_email(self, value):
+        value = value.lower().strip()
+
+        user_id = self.instance.IdUsuario if self.instance else None
+
+        if Usuario.objects.filter(Email=value).exclude(IdUsuario=user_id).exists():
+           raise serializers.ValidationError("Este correo ya está en uso")
+
+        return value

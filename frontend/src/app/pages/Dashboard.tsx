@@ -195,7 +195,7 @@ export function Dashboard() {
               </div>
             )) : (
               <div className="text-center py-8 text-gray-500 border border-dashed rounded-xl">
-                 No hay productos con stock bajo 🎉
+                 No hay productos con stock bajo 
               </div>
             )}
           </div>
