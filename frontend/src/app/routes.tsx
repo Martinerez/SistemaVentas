@@ -12,6 +12,7 @@ import { Login } from "./pages/Login";
 import { GestionUsuarios } from "./pages/GestionUsuarios";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
+import { GuiaUsuario } from "./pages/GuiaUsuario";
 
 export const router = createBrowserRouter([
   {
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
           { path: "perdidas", Component: Perdidas },
           { path: "devoluciones", Component: Devoluciones },
           { path: "ajustes", Component: Ajustes },
+           { path: "guia-usuario", Component: GuiaUsuario },
           // ── Admin-only routes ──────────────────────────────
           {
             path: "usuarios",

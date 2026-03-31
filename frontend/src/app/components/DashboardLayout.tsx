@@ -16,6 +16,7 @@ import {
   Briefcase,
   Users,
   LogOut,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { useAuth } from "../contexts/AuthContext";
@@ -39,6 +40,7 @@ export function DashboardLayout() {
     { icon: RefreshCcw, label: "Devoluciones", path: "/devoluciones" },
     { icon: Users, label: "Usuarios", path: "/usuarios" },
     { icon: Settings, label: "Ajustes", path: "/ajustes" },
+   { icon: BookOpen, label: "Guía Usuario", path: "/guia-usuario" },
   ];
 
   const menuItems = userRole === "admin" ? [...commonItems, ...adminItems] : commonItems;
