@@ -10,7 +10,7 @@ from django.db.models.functions import TruncDate
 
 from .models import Venta, DetalleVenta
 from catalogo.models import Producto, Proveedor
-from inventario.models import Inventario
+from inventario.models import Inventario, Perdida
 from usuarios.models import Usuario
 from usuarios.permissions import IsAdminRole
 from .serializers import VentaSerializer, DetalleVentaSerializer
@@ -66,8 +66,12 @@ class DashboardStatsView(APIView):
         total_proveedores = Proveedor.objects.count()
 
         low_stock_qs = Producto.objects.annotate(
-            stock=Count('detalleentradainventario__inventario', 
-                  filter=Q(detalleentradainventario__inventario__Estado='Disponible'))
+
+            stock=Count(
+                'detalleentradainventario__inventarios', 
+                filter=Q(detalleentradainventario__inventarios__Estado='Disponible')
+            )
+
         ).filter(stock__lt=10).order_by('stock')[:5]
 
         low_stock_items = [{
@@ -85,6 +89,12 @@ class DashboardStatsView(APIView):
             "total": float(v.Total)
         } for v in recent_sales_qs]
 
+
+        # 6. Perdidas de los últimos 7 días
+        perdidas_semana = Perdida.objects.filter(Fecha__gte=seven_days_ago)
+        weekly_losses = perdidas_semana.aggregate(total=Sum('Total'))['total'] or 0
+
+        # 7. Chart data (ventas diarias)
         sales_by_date = ventas_semana.annotate(date=TruncDate('Fecha')).values('date').annotate(
             total=Sum('Total')
         ).order_by('date')
@@ -98,6 +108,7 @@ class DashboardStatsView(APIView):
             "totalProveedores": total_proveedores,
             "lowStockItems": low_stock_items,
             "recentSales": recent_sales,
+            "weeklyLosses": float(weekly_losses),
             "chartData": chart_data
         })
 
@@ -127,9 +138,9 @@ class ReportePivotVentasView(APIView):
         return Response({"producto": "Sin datos", "ene":0, "feb":0, "mar":0, "abr":0, "may":0, "jun":0, "jul":0, "ago":0, "sep":0, "oct":0, "nov":0, "dic":0})
     
 class ProductosPorProveedorView(APIView):
-     permission_classes = [IsAuthenticated, IsAdminRole]
+    permission_classes = [IsAuthenticated, IsAdminRole]
 
-     def get(self, request):
+    def get(self, request):
         proveedor_id = request.query_params.get('proveedorId')
         if not proveedor_id:
             return Response({"error": "Falta proveedorId"}, status=400)
