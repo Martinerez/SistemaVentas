@@ -124,45 +124,63 @@ class ProcesarDevolucionView(APIView):
         
         try:
             usuario = Usuario.objects.get(IdUsuario=usuario_id)
+
             if not detalles:
                 raise ValueError("La devolución debe tener al menos un ítem.")
                 
             first_inv_id = detalles[0].get('inventarioId')
-            first_inv = Inventario.objects.select_related('IdDetalleEntrada__IdEntradaInventario').get(IdInventario=first_inv_id)
+            first_inv = Inventario.objects.select_related(
+                'IdDetalleEntrada__IdEntradaInventario'
+            ).get(IdInventario=first_inv_id)
+
             entrada_inventario = first_inv.IdDetalleEntrada.IdEntradaInventario
             
+            # ✅ CREAR SOLICITUD
             devolucion = SolicitudDevolucion.objects.create(
                 IdEntradaInventario=entrada_inventario,
                 IdUsuario=usuario,
-                Estado="Aceptada",
+                Estado="Pendiente",
                 Observaciones=observaciones,
                 Fecha=fecha
             )
             
+            # ✅ ESTE FOR DEBE ESTAR DENTRO
             for d in detalles:
                 inv_id = d.get('inventarioId')
                 precio = d.get('precioCompraUnitario', 0)
-                
-                inventario = Inventario.objects.select_for_update().get(IdInventario=inv_id)
-                if inventario.Estado != "Vendido":
-                    raise ValueError(f"El ítem {inv_id} no está Vendido para poder ser Devuelto (Estado: {inventario.Estado}).")
-                    
+
+                inventario = Inventario.objects.select_for_update().get(
+                    IdInventario=inv_id
+                )
+
+                if inventario.Estado not in ["Disponible", "Dañado"]:
+                    raise ValueError(
+                        f"El ítem {inv_id} no puede ser devuelto (Estado: {inventario.Estado})."
+                    )
+
                 DetalleSolicitudDevolucion.objects.create(
                     IdSolicitudDevolucion=devolucion,
                     IdInventario=inventario,
-                    EstadoItem="Aceptado",
+                    EstadoItem="Pendiente",
                     PrecioCompraUnitario=precio
                 )
                 
-                inventario.Estado = "Devuelto"
-                inventario.save()
-                
-            return Response({"message": "Devolución procesada exitosamente", "devolucionId": devolucion.IdSolicitudDevolucion}, status=status.HTTP_201_CREATED)
+            return Response(
+                {
+                    "message": "Devolución procesada exitosamente",
+                    "devolucionId": devolucion.IdSolicitudDevolucion
+                },
+                status=status.HTTP_201_CREATED
+            )
+
         except Usuario.DoesNotExist:
             return Response({"error": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
         except Inventario.DoesNotExist:
             return Response({"error": "Ítem de inventario no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
         except ValueError as ve:
             return Response({"error": str(ve)}, status=status.HTTP_400_BAD_REQUEST)
+
         except Exception as e:
             return Response({"error": f"Error interno: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
