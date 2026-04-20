@@ -57,7 +57,7 @@ export function Dashboard() {
     {
       icon: DollarSign,
       label: "Ventas Semanales",
-      value: `$${weeklySales.toFixed(2)}`,
+      value: `C$ ${weeklySales.toFixed(2)}`,
       change: "Últimos 7 días",
       trend: "up",
       color: "green",
@@ -137,7 +137,7 @@ export function Dashboard() {
             <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
               <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} dy={10} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} dx={-10} tickFormatter={(value) => `$${value}`} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} dx={-10} tickFormatter={(value) => `C$ ${value}`} />
               <Tooltip 
                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
                 itemStyle={{ color: '#166534', fontWeight: 'bold' }}
@@ -150,7 +150,7 @@ export function Dashboard() {
                 strokeWidth={3}
                 dot={{ r: 4, fill: '#16a34a', strokeWidth: 2, stroke: '#fff' }}
                 activeDot={{ r: 6, strokeWidth: 0 }}
-                name="Ventas ($)"
+                name="Ventas (C$)"
               />
             </LineChart>
           </ResponsiveContainer>
@@ -233,7 +233,7 @@ export function Dashboard() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-sm text-green-700">{sale.total}</p>
+                 <p className="font-bold text-sm text-green-700">{String(sale.total).replace('$', 'C$ ')}</p>
                   <p className="text-xs text-gray-500">{sale.items} items</p>
                 </div>
               </div>

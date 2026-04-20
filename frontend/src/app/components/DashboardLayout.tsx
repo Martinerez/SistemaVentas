@@ -17,6 +17,7 @@ import {
   Users,
   LogOut,
   BookOpen,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { useAuth } from "../contexts/AuthContext";
@@ -37,6 +38,7 @@ export function DashboardLayout() {
     { icon: Truck, label: "Pedidos", path: "/pedidos" },
     { icon: TrendingDown, label: "Pérdidas", path: "/perdidas" },
     { icon: RefreshCcw, label: "Devoluciones", path: "/devoluciones" },
+    { icon: BarChart3, label: "Reportes", path: "/reportes" },
     { icon: Users, label: "Usuarios", path: "/usuarios" },
     { icon: Settings, label: "Ajustes", path: "/ajustes" },
     { icon: BookOpen, label: "Guía Usuario", path: "/guia-usuario" },
