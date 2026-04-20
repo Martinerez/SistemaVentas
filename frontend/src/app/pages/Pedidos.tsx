@@ -43,6 +43,8 @@ interface Proveedor {
 ========================= */
 
 export function Pedidos() {
+  const [proveedorSeleccionado, setProveedorSeleccionado] =
+    useState<Proveedor | null>(null);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [busqueda, setBusqueda] = useState("");
 
@@ -129,6 +131,18 @@ export function Pedidos() {
     return (
       p.name.toLowerCase().includes(t) ||
       (p.contact ?? "").toLowerCase().includes(t)
+    );
+  });
+
+  const pedidosProveedor = entradas.filter((e) => {
+    if (!proveedorSeleccionado) return false;
+
+    const hace30 = new Date();
+    hace30.setDate(hace30.getDate() - 30);
+
+    return (
+      e.proveedorId === proveedorSeleccionado.id &&
+      new Date(e.fechaEntrada) >= hace30
     );
   });
 
@@ -297,7 +311,11 @@ export function Pedidos() {
       {/* LISTA */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {proveedoresFiltrados.map((p) => (
-          <Card key={p.id} className="p-4 space-y-2 hover:shadow-md transition">
+          <Card
+            key={p.id}
+            onClick={() => setProveedorSeleccionado(p)}
+            className="p-4 space-y-2 hover:shadow-md transition cursor-pointer"
+          >
             {/* HEADER CARD */}
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
@@ -321,12 +339,46 @@ export function Pedidos() {
 
             {/* PEDIDOS RECIENTES */}
             <p className="text-xs text-gray-600">
-              Pedidos recientes (30 días):{" "}
+              Pedidos recientes (últimos 30 días):{" "}
               <span className="font-semibold">{p.pedidos_recientes}</span>
             </p>
           </Card>
         ))}
       </div>
+
+      {proveedorSeleccionado && (
+        <Card className="p-6">
+          <h2 className="text-xl font-bold mb-4">
+            Pedidos en los últimos 30 días: {proveedorSeleccionado.name}
+          </h2>
+
+          {pedidosProveedor.length === 0 ? (
+            <p className="text-gray-500">No hay pedidos recientes</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left border-b">
+                  <th>ID</th>
+                  <th>Fecha</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {pedidosProveedor.map((e) => (
+                  <tr key={e.id} className="border-b">
+                    <td>{e.id}</td>
+                    <td>
+                      {new Date(e.fechaEntrada).toLocaleDateString("en-US")}
+                    </td>
+                    <td>C${e.total}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Card>
+      )}
 
       {/* =========================
           MODAL PROVEEDOR

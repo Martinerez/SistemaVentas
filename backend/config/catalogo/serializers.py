@@ -1,4 +1,4 @@
-from rest_framework import serializers
+from rest_framework import serializers 
 from .models import Categoria, Proveedor, Producto
 from inventario.models import EntradaInventario, Inventario, DetalleEntradaInventario
 from datetime import timedelta
@@ -20,40 +20,39 @@ class CategoriaSerializer(serializers.ModelSerializer):
         return obj.producto_set.count()
 
 
-#  PROVEEDOR CORREGIDO (CLAVE)
+# 🔥 PROVEEDOR (TODO EN UNO)
 class ProveedorSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='IdProveedor', read_only=True)
     name = serializers.CharField(source='Nombre')
     contact = serializers.CharField(source='Contacto', required=False, allow_null=True)
     status = serializers.CharField(source='Estado', required=False)
 
-    class Meta:
-        model = Proveedor
-        fields = ['id', 'name', 'contact', 'status']
-
-
-class ProveedorDetailSerializer(ProveedorSerializer):
-
     pedidos_recientes = serializers.SerializerMethodField()
     activo = serializers.SerializerMethodField()
 
-    class Meta(ProveedorSerializer.Meta):
-        fields = ProveedorSerializer.Meta.fields + [
-            "pedidos_recientes",
-            "activo",
+    class Meta:
+        model = Proveedor
+        fields = [
+            'id',
+            'name',
+            'contact',
+            'status',
+            'pedidos_recientes',
+            'activo'
         ]
 
     def get_pedidos_recientes(self, obj):
         hace_30_dias = timezone.now() - timedelta(days=30)
 
         return EntradaInventario.objects.filter(
-            proveedorId=obj.id,
-            fechaEntrada__gte=hace_30_dias
+            IdProveedor=obj,  # 🔥 CORREGIDO (antes estaba mal)
+            FechaEntrada__gte=hace_30_dias
         ).count()
 
     def get_activo(self, obj):
-        return self.get_pedidos_recientes(obj) >= 1
-
+        return EntradaInventario.objects.filter(
+            IdProveedor=obj
+        ).exists()
 
 
 class ProductoSerializer(serializers.ModelSerializer):
@@ -69,10 +68,17 @@ class ProductoSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'categoryId', 'status', 'stock', 'salePrice']
 
     def get_stock(self, obj):
-        return Inventario.objects.filter(IdDetalleEntrada__IdProducto=obj, Estado='Disponible').count()
+        return Inventario.objects.filter(
+            IdDetalleEntrada__IdProducto=obj,
+            Estado='Disponible'
+        ).count()
 
     def get_salePrice(self, obj):
-        latest_detalle = DetalleEntradaInventario.objects.filter(IdProducto=obj).order_by('-IdDetalleEntrada').first()
+        latest_detalle = DetalleEntradaInventario.objects.filter(
+            IdProducto=obj
+        ).order_by('-IdDetalleEntrada').first()
+
         base_price = float(latest_detalle.PrecioCompraUnitario) if latest_detalle else 0.0
         profit = float(obj.IdCategoria.PorcentajeGanancia)
+
         return round(base_price * (1 + (profit / 100)), 2)

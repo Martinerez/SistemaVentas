@@ -159,13 +159,13 @@ export function Devoluciones() {
     try {
       const payload = {
         IdEntradaInventario: idEntrada,
-        IdUsuario: userId,
-        FechaSolicitud: new Date().toISOString().split("T")[0], //Formato fecha YYYY-MM-DD
+        usuarioId: userId,
+        fechaSolicitud: new Date().toISOString().split("T")[0] + "T00:00:00Z",
         Estado: "Pendiente",
         Observaciones: observaciones, //Campo opcional de la cabecera
         detalles: [
           {
-            IdInventario: invIdNum,
+            inventarioId: invIdNum,
             MotivoRechazo: motivo, //El motivo va en el detalle
             PrecioCompraUnitario: precioCompra, //Requerido por el MR
             EstadoItem: "Pendiente",
@@ -181,10 +181,14 @@ export function Devoluciones() {
       setObservaciones("");
       fetchData();
     } catch (e: any) {
-      console.log("ERROR:", e.response?.data);
+      console.log("ERROR COMPLETO:", e);
+      console.log("DATA:", e.response?.data);
+      console.log("STATUS:", e.response?.status);
+
       toast.error(
-        e.response?.data?.detail ||
-          "Ocurrió un error al procesar la solicitud.",
+        e.response?.data?.error ||
+          e.response?.data?.detail ||
+          "Error desconocido",
       );
     } finally {
       setIsSubmitting(false);
@@ -263,9 +267,7 @@ export function Devoluciones() {
                       <TableCell>
                         <div className="flex items-center gap-2 text-slate-600">
                           <Calendar className="size-4" />
-                          {new Date(
-                            d.FechaSolicitud || d.fechaSolicitud,
-                          ).toLocaleDateString()}
+                          {new Date(d.fecha).toLocaleDateString("en-US")}
                         </div>
                       </TableCell>
                       <TableCell>
