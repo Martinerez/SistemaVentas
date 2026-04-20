@@ -117,7 +117,7 @@ export function Reportes() {
     }
 
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), `Reporte_Estetico_${new Date().getTime()}.xlsx`);
+    saveAs(new Blob([buffer]),  `Reporte_Miscelanea_BendicionDeDios_${new Date().getTime()}.xlsx`);
   };
 
   return (

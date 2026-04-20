@@ -476,7 +476,7 @@ export function Productos() {
                         </span>
                       </TableCell>
                       <TableCell className="font-semibold text-slate-800">
-                        ${product.salePrice.toFixed(2)}
+                        C${product.salePrice.toFixed(2)}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
