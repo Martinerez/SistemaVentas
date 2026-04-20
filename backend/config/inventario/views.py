@@ -1,3 +1,5 @@
+from urllib import request
+
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -11,17 +13,54 @@ from .serializers import (
     PerdidaSerializer, DetallePerdidaSerializer, SolicitudDevolucionSerializer, DetalleSolicitudDevolucionSerializer
 )
 from django.utils import timezone
+from rest_framework.decorators import action
 
 class EntradaInventarioViewSet(viewsets.ModelViewSet):
     queryset = EntradaInventario.objects.all()
     serializer_class = EntradaInventarioSerializer
     permission_classes = [IsAuthenticated, IsAdminRole]
 
+    @action(detail=True, methods=["delete"])
+    @transaction.atomic
+    def delete_completo(self, request, pk=None):
+        entrada = self.get_object()
+
+        # 1. borrar inventarios
+        Inventario.objects.filter(
+            IdDetalleEntrada__IdEntradaInventario=entrada
+        ).delete()
+
+        # 2. borrar detalles
+        DetalleEntradaInventario.objects.filter(
+            IdEntradaInventario=entrada
+        ).delete()
+
+        # 3. borrar entrada
+        entrada.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 class DetalleEntradaInventarioViewSet(viewsets.ModelViewSet):
     queryset = DetalleEntradaInventario.objects.all()
     serializer_class = DetalleEntradaInventarioSerializer
     permission_classes = [IsAuthenticated, IsAdminRole]
 
+    # =========================
+    # FILTRO POR ENTRADA
+    # =========================
+    def get_queryset(self):
+        entrada_id = self.request.query_params.get("entradaInventarioId")
+
+        queryset = DetalleEntradaInventario.objects.all()
+
+        if entrada_id:
+            queryset = queryset.filter(IdEntradaInventario_id=entrada_id)
+
+        return queryset
+
+    # =========================
+    # CREAR DETALLE + INVENTARIO
+    # =========================
     @transaction.atomic
     def perform_create(self, serializer):
         detalle = serializer.save()
@@ -37,6 +76,7 @@ class DetalleEntradaInventarioViewSet(viewsets.ModelViewSet):
 
         Inventario.objects.bulk_create(inventarios)
 
+    
 class InventarioViewSet(viewsets.ModelViewSet):
     queryset = Inventario.objects.all()
     serializer_class = InventarioSerializer

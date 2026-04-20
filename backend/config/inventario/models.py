@@ -30,7 +30,7 @@ class Inventario(models.Model):
         ('Devuelto', 'Devuelto'),
     )
     IdInventario = models.AutoField(primary_key=True)
-    IdDetalleEntrada = models.ForeignKey(DetalleEntradaInventario, on_delete=models.RESTRICT, db_column='IdDetalleEntrada')
+    IdDetalleEntrada = models.ForeignKey(DetalleEntradaInventario, on_delete=models.RESTRICT, db_column='IdDetalleEntrada',related_name="inventarios")
     Estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Disponible', null=False, blank=False)
     FechaMovimiento = models.DateTimeField(null=False, blank=False)
 

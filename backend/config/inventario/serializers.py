@@ -4,16 +4,12 @@ from catalogo.models import Proveedor, Producto
 from usuarios.models import Usuario
 from django.utils import timezone
 
-class EntradaInventarioSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(source='IdEntradaInventario', read_only=True)
-    proveedorId = serializers.PrimaryKeyRelatedField(source='IdProveedor', queryset=Proveedor.objects.all())
-    usuarioId = serializers.PrimaryKeyRelatedField(source='IdUsuario', queryset=Usuario.objects.all())
-    fechaEntrada = serializers.DateTimeField(source='FechaEntrada')
-    total = serializers.DecimalField(source='Total', max_digits=12, decimal_places=2)
+class InventarioMiniSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='IdInventario', read_only=True)
 
     class Meta:
-        model = EntradaInventario
-        fields = ['id', 'proveedorId', 'usuarioId', 'fechaEntrada', 'total']
+        model = Inventario
+        fields = ["id", "Estado"]
 
 class DetalleEntradaInventarioSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='IdDetalleEntrada', read_only=True)
@@ -21,10 +17,34 @@ class DetalleEntradaInventarioSerializer(serializers.ModelSerializer):
     productoId = serializers.PrimaryKeyRelatedField(source='IdProducto', queryset=Producto.objects.all())
     cantidad = serializers.IntegerField(source='Cantidad')
     precioCompraUnitario = serializers.DecimalField(source='PrecioCompraUnitario', max_digits=12, decimal_places=2)
+    productoNombre = serializers.CharField(source="IdProducto.Nombre", read_only=True)
+    estadoItems = InventarioMiniSerializer(
+        source="inventarios",  
+        many=True,
+        read_only=True
+    )
 
+    
     class Meta:
         model = DetalleEntradaInventario
-        fields = ['id', 'entradaInventarioId', 'productoId', 'cantidad', 'precioCompraUnitario']
+        fields = ['id', 'entradaInventarioId', 'productoId', 'productoNombre', 'cantidad', 'precioCompraUnitario', 'estadoItems']
+
+class EntradaInventarioSerializer(serializers.ModelSerializer):
+    detalles = DetalleEntradaInventarioSerializer(
+        source="detalleentradainventario_set",
+        many=True,
+        read_only=True
+    )
+    id = serializers.IntegerField(source='IdEntradaInventario', read_only=True)
+    proveedorId = serializers.PrimaryKeyRelatedField(source='IdProveedor', queryset=Proveedor.objects.all())
+    usuarioId = serializers.PrimaryKeyRelatedField(source='IdUsuario', queryset=Usuario.objects.all())
+    fechaEntrada = serializers.DateTimeField(source='FechaEntrada')
+    total = serializers.DecimalField(source='Total', max_digits=12, decimal_places=2)
+    proveedorNombre = serializers.CharField(source="IdProveedor.Nombre", read_only=True)
+    
+    class Meta:
+        model = EntradaInventario
+        fields = ['id', 'proveedorId', 'usuarioId', 'fechaEntrada', 'total', 'proveedorNombre', 'detalles' ]
 
     
 class InventarioSerializer(serializers.ModelSerializer):

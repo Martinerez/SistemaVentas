@@ -3,7 +3,16 @@ import api from "../api/axiosInstance";
 import { Card } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
-import { Search, Store, Phone, Plus, Check, Trash2 } from "lucide-react";
+import {
+  Search,
+  Store,
+  Phone,
+  Plus,
+  Check,
+  Trash2,
+  Pencil,
+  Eye,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -22,6 +31,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "../components/ui/table";
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../components/ui/alert-dialog";
 
 /* =========================
    TIPOS (con serializer nuevo)
@@ -75,6 +104,31 @@ export function Pedidos() {
   const [productosPedido, setProductosPedido] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Estados para pedidos
+  const [viewingPedido, setViewingPedido] = useState<any>(null);
+  const [isViewPedidoOpen, setIsViewPedidoOpen] = useState(false);
+
+  const [editingPedido, setEditingPedido] = useState<any>(null);
+  const [isEditPedidoOpen, setIsEditPedidoOpen] = useState(false);
+
+  const [deletePedidoAlert, setDeletePedidoAlert] = useState({
+    isOpen: false,
+    pedidoId: null,
+    puedeEliminar: false,
+  });
+
+  const isEditMode = Boolean(editingPedido);
+
+  const resetModal = () => {
+    setModalPedido(false);
+    setEditingPedido(null);
+    setProductosPedido([]);
+    setProductoId("");
+    setCantidad("");
+    setTotalPagado("");
+    setSelectedProveedor("");
+  };
+
   /* =========================
      FETCH
   ========================= */
@@ -120,6 +174,80 @@ export function Pedidos() {
     fetchProveedores();
     fetchProductos();
   }, []);
+
+  /* HANDLERS */
+
+  const handleViewPedidoClick = (pedido: any) => {
+    setViewingPedido(pedido);
+    setIsViewPedidoOpen(true);
+  };
+  const handleEditPedidoClick = (pedido: any) => {
+    setEditingPedido(pedido);
+
+    // proveedor
+    setSelectedProveedor(pedido.proveedorId?.toString());
+
+    // convertir detalles a formato del formulario
+    const mapped = pedido.detalles.map((d: any) => ({
+      id: d.id,
+      productoId: d.productoId?.toString(),
+      nombre: d.productoNombre,
+      cantidad: d.cantidad,
+      precioUnitario: Number(d.precioCompraUnitario),
+      totalPagado: d.cantidad * Number(d.precioCompraUnitario),
+    }));
+
+    setProductosPedido(mapped);
+
+    setModalPedido(true);
+  };
+
+  const handleDeletePedidoClick = async (pedido: any) => {
+    try {
+      const res = await api.get(
+        `http://localhost:8000/api/inventario/detalles-entrada/?entradaInventarioId=${pedido.id}`,
+      );
+
+      const detalles = res.data.results ?? res.data;
+
+      const puedeEliminar = detalles.every((d: any) =>
+        d.estadoItems?.every((i: any) => i.Estado === "Disponible"),
+      );
+
+      setDeletePedidoAlert({
+        isOpen: true,
+        pedidoId: pedido.id,
+        puedeEliminar,
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleConfirmDeletePedido = async () => {
+    const entradaId = deletePedidoAlert.pedidoId;
+
+    if (!entradaId || isNaN(Number(entradaId))) {
+      console.error("ID inválido:", deletePedidoAlert);
+      return;
+    }
+
+    try {
+      await api.delete(
+        `http://localhost:8000/api/inventario/entradas/${entradaId}/delete_completo/`,
+      );
+
+      fetchEntradas();
+
+      setDeletePedidoAlert({
+        isOpen: false,
+        pedidoId: null,
+        puedeEliminar: false,
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   /* =========================
      FILTRO
@@ -219,32 +347,66 @@ export function Pedidos() {
     try {
       const total = calcTotal();
 
-      const { data: entrada } = await api.post(
-        "http://localhost:8000/api/inventario/entradas/",
-        {
-          proveedorId: Number(selectedProveedor),
-          usuarioId: userId,
-          fechaEntrada: new Date().toISOString(),
-          total,
-        },
-      );
+      let entradaId = editingPedido?.id;
 
-      for (const p of productosPedido) {
-        const { data: det } = await api.post(
-          "http://localhost:8000/api/inventario/detalles-entrada/",
+      // =========================
+      // 1. CREAR O ACTUALIZAR CABECERA
+      // =========================
+      if (isEditMode) {
+        // 1. borrar todo
+        await api.delete(
+          `http://localhost:8000/api/inventario/entradas/${entradaId}/delete_completo/`,
+        );
+
+        // 2. recrear entrada
+        const { data } = await api.post(
+          "http://localhost:8000/api/inventario/entradas/",
           {
-            entradaInventarioId: entrada.id,
-            productoId: Number(p.productoId),
-            cantidad: p.cantidad,
-            precioCompraUnitario: p.precioUnitario,
+            proveedorId: Number(selectedProveedor),
+            usuarioId: userId,
+            fechaEntrada: new Date().toISOString(),
+            total,
           },
         );
+        fetchEntradas();
+        entradaId = data.id;
+      } else {
+        const { data } = await api.post(
+          "http://localhost:8000/api/inventario/entradas/",
+          {
+            proveedorId: Number(selectedProveedor),
+            usuarioId: userId,
+            fechaEntrada: new Date().toISOString(),
+            total,
+          },
+        );
+        fetchEntradas();
+        entradaId = data.id;
       }
 
-      toast.success("Pedido creado");
+      // detalles siempre igual
+      await Promise.all(
+        productosPedido.map((p) =>
+          api.post("http://localhost:8000/api/inventario/detalles-entrada/", {
+            entradaInventarioId: entradaId,
+            productoId: Number(p.productoId),
+            cantidad: Number(p.cantidad),
+            precioCompraUnitario: Number(p.precioUnitario),
+          }),
+        ),
+      );
+      // =========================
+      // 3. CLEAN UI
+      // =========================
+      toast.success(isEditMode ? "Pedido actualizado" : "Pedido creado");
+
       setProductosPedido([]);
+      setSelectedProveedor("");
+      setEditingPedido(null);
+      setModalPedido(false);
       setIsAddMode(false);
     } catch (e) {
+      console.error(e);
       toast.error("Error al guardar");
     }
   };
@@ -282,7 +444,6 @@ export function Pedidos() {
           </Button>
         </div>
       </div>
-
       {/* SUCCESS */}
       {successMessage && (
         <Card className="p-4 bg-green-50 border border-green-200">
@@ -294,7 +455,6 @@ export function Pedidos() {
           </div>
         </Card>
       )}
-
       {/* SEARCH */}
       <Card className="p-4">
         <div className="relative">
@@ -307,7 +467,6 @@ export function Pedidos() {
           />
         </div>
       </Card>
-
       {/* LISTA */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {proveedoresFiltrados.map((p) => (
@@ -345,45 +504,173 @@ export function Pedidos() {
           </Card>
         ))}
       </div>
-
       {proveedorSeleccionado && (
         <Card className="p-6">
-          <h2 className="text-xl font-bold mb-4">
-            Pedidos en los últimos 30 días: {proveedorSeleccionado.name}
+          <h2 className="text-2xl font-bold text-slate-800">
+            {proveedorSeleccionado.name}
           </h2>
-
+          <p className="text-sm text-gray-600">
+            {pedidosProveedor.length} Pedidos en los últimos 30 días
+          </p>
           {pedidosProveedor.length === 0 ? (
             <p className="text-gray-500">No hay pedidos recientes</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left border-b">
-                  <th>ID</th>
-                  <th>Fecha</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
+            <div className="rounded-xl border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Total Pagado</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
 
-              <tbody>
-                {pedidosProveedor.map((e) => (
-                  <tr key={e.id} className="border-b">
-                    <td>{e.id}</td>
-                    <td>
-                      {new Date(e.fechaEntrada).toLocaleDateString("en-US")}
-                    </td>
-                    <td>C${e.total}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                <TableBody>
+                  {pedidosProveedor.map((e) => (
+                    <TableRow key={e.id}>
+                      <TableCell>
+                        {new Date(e.fechaEntrada).toLocaleDateString("en-US")}
+                      </TableCell>
+                      <TableCell>C${e.total}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewPedidoClick(e)}
+                          >
+                            <Eye className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditPedidoClick(e)}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeletePedidoClick(e)}
+                          >
+                            <Trash2 className="size-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </Card>
       )}
+      {/* MODAL VIEW PEDIDO */}
+      <Dialog open={isViewPedidoOpen} onOpenChange={setIsViewPedidoOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Detalle del Pedido</DialogTitle>
+          </DialogHeader>
 
+          <div className="space-y-4">
+            <p>
+              <b>Fecha:</b>{" "}
+              {new Date(viewingPedido?.fechaEntrada).toLocaleDateString(
+                "es-NI",
+              )}
+            </p>
+
+            <p>
+              <b>Proveedor:</b> {viewingPedido?.proveedorNombre}
+            </p>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Producto</TableHead>
+                  <TableHead>Cantidad</TableHead>
+                  <TableHead>Precio Unitario</TableHead>
+                  <TableHead>Subtotal</TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {viewingPedido?.detalles?.map((d: any) => {
+                  const subtotal =
+                    Number(d.cantidad) * Number(d.precioCompraUnitario);
+
+                  return (
+                    <TableRow key={d.id}>
+                      <TableCell>{d.productoNombre}</TableCell>
+                      <TableCell>{d.cantidad}</TableCell>
+                      <TableCell>C${d.precioCompraUnitario}</TableCell>
+                      <TableCell>C${subtotal.toFixed(2)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+
+            <p className="text-right font-bold">
+              Total: C${Number(viewingPedido?.total || 0).toFixed(2)}
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* MODAL ALERTA ELIMINAR PEDIDO */}
+      <AlertDialog open={deletePedidoAlert.isOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deletePedidoAlert.puedeEliminar
+                ? "¿Eliminar pedido?"
+                : "No se puede eliminar"}
+            </AlertDialogTitle>
+
+            <AlertDialogDescription>
+              {deletePedidoAlert.puedeEliminar
+                ? "Se eliminará el pedido completo."
+                : "Todos los items deben estar disponibles."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            {deletePedidoAlert.puedeEliminar ? (
+              <>
+                <AlertDialogAction
+                  onClick={() =>
+                    setDeletePedidoAlert({
+                      isOpen: false,
+                      pedidoId: null,
+                      puedeEliminar: false,
+                    })
+                  }
+                >
+                  Cancelar
+                </AlertDialogAction>
+                <AlertDialogAction onClick={handleConfirmDeletePedido}>
+                  Sí, eliminar
+                </AlertDialogAction>
+              </>
+            ) : (
+              <AlertDialogAction
+                onClick={() =>
+                  setDeletePedidoAlert({
+                    isOpen: false,
+                    pedidoId: null,
+                    puedeEliminar: false,
+                  })
+                }
+              >
+                Entendido
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {/* =========================
           MODAL PROVEEDOR
       ========================= */}
-
       <Dialog open={modalProveedor} onOpenChange={setModalProveedor}>
         <DialogContent>
           <DialogHeader>
@@ -427,11 +714,9 @@ export function Pedidos() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* =========================
           MODAL PEDIDO
       ========================= */}
-
       <Dialog open={modalPedido} onOpenChange={setModalPedido}>
         <DialogContent className="w-[90vw] max-w-5xl h-[85vh] overflow-y-auto flex flex-col">
           <DialogHeader>
@@ -550,23 +835,12 @@ export function Pedidos() {
               <p className="font-bold">Total: C${calcTotal().toFixed(2)}</p>
 
               <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setModalPedido(false);
-                    setProductosPedido([]);
-                    setProductoId("");
-                    setCantidad("");
-                    setTotalPagado("");
-                    setSelectedProveedor("");
-                  }}
-                >
+                <Button variant="outline" onClick={resetModal}>
                   Cancelar
                 </Button>
-
                 <Button onClick={handleSubmit}>
                   <Check className="size-4 mr-2" />
-                  Guardar pedido
+                  {isEditMode ? "Actualizar pedido" : "Guardar pedido"}
                 </Button>
               </div>
             </div>

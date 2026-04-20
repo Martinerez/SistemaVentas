@@ -11,7 +11,7 @@ from django.db.models.functions import TruncDate
 from .models import Venta, DetalleVenta
 from .serializers import VentaSerializer, DetalleVentaSerializer
 from catalogo.models import Producto, Proveedor
-from inventario.models import Inventario
+from inventario.models import Inventario, Perdida
 from usuarios.models import Usuario
 from usuarios.permissions import IsAdminRole
 
@@ -92,8 +92,8 @@ class DashboardStatsView(APIView):
         # Using reverse relations from Producto -> DetalleEntradaInventario -> Inventario
         low_stock_qs = Producto.objects.annotate(
             stock=Count(
-                'detalleentradainventario__inventario', 
-                filter=Q(detalleentradainventario__inventario__Estado='Disponible')
+                'detalleentradainventario__inventarios', 
+                filter=Q(detalleentradainventario__inventarios__Estado='Disponible')
             )
         ).filter(stock__lt=10).order_by('stock')[:5]
 
@@ -120,7 +120,11 @@ class DashboardStatsView(APIView):
             for v in recent_sales_qs
         ]
 
-        # 6. Chart data (ventas diarias)
+        # 6. Perdidas de los últimos 7 días
+        perdidas_semana = Perdida.objects.filter(Fecha__gte=seven_days_ago)
+        weekly_losses = perdidas_semana.aggregate(total=Sum('Total'))['total'] or 0
+
+        # 7. Chart data (ventas diarias)
         sales_by_date = ventas_semana.annotate(date=TruncDate('Fecha')).values('date').annotate(
             total=Sum('Total')
         ).order_by('date')
@@ -147,5 +151,6 @@ class DashboardStatsView(APIView):
             "totalProveedores": total_proveedores,
             "lowStockItems": low_stock_items,
             "recentSales": recent_sales,
+            "weeklyLosses": float(weekly_losses),
             "chartData": chart_data
         })
