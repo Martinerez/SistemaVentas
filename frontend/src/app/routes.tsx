@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Route } from "react-router";
 import { DashboardLayout } from "./components/DashboardLayout";
 import { Dashboard } from "./pages/Dashboard";
 import { Productos } from "./pages/Productos";
@@ -8,11 +8,12 @@ import { Perdidas } from "./pages/Perdidas";
 import { Devoluciones } from "./pages/Devoluciones";
 import { Ajustes } from "./pages/Ajustes";
 import { Login } from "./pages/Login";
+
 import { GestionUsuarios } from "./pages/GestionUsuarios";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import { GuiaUsuario } from "./pages/GuiaUsuario";
-
+import { Reportes } from "./pages/Reportes";
 export const router = createBrowserRouter([
   {
     path: "/login",
@@ -39,6 +40,11 @@ export const router = createBrowserRouter([
             path: "usuarios",
             Component: AdminRoute,
             children: [{ index: true, Component: GestionUsuarios }],
+          },
+          {
+            path: "reportes", 
+           Component: AdminRoute,
+           children: [{ index: true, Component: Reportes }],
           },
         ],
       },
