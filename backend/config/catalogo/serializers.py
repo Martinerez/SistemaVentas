@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from .models import Categoria, Proveedor, Producto
-from inventario.models import Inventario, DetalleEntradaInventario
+from inventario.models import EntradaInventario, Inventario, DetalleEntradaInventario
+from datetime import timedelta
+from django.utils import timezone
+
 
 class CategoriaSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='IdCategoria', read_only=True)
@@ -16,6 +19,8 @@ class CategoriaSerializer(serializers.ModelSerializer):
     def get_productCount(self, obj):
         return obj.producto_set.count()
 
+
+#  PROVEEDOR CORREGIDO (CLAVE)
 class ProveedorSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='IdProveedor', read_only=True)
     name = serializers.CharField(source='Nombre')
@@ -25,6 +30,31 @@ class ProveedorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Proveedor
         fields = ['id', 'name', 'contact', 'status']
+
+
+class ProveedorDetailSerializer(ProveedorSerializer):
+
+    pedidos_recientes = serializers.SerializerMethodField()
+    activo = serializers.SerializerMethodField()
+
+    class Meta(ProveedorSerializer.Meta):
+        fields = ProveedorSerializer.Meta.fields + [
+            "pedidos_recientes",
+            "activo",
+        ]
+
+    def get_pedidos_recientes(self, obj):
+        hace_30_dias = timezone.now() - timedelta(days=30)
+
+        return EntradaInventario.objects.filter(
+            proveedorId=obj.id,
+            fechaEntrada__gte=hace_30_dias
+        ).count()
+
+    def get_activo(self, obj):
+        return self.get_pedidos_recientes(obj) >= 1
+
+
 
 class ProductoSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='IdProducto', read_only=True)

@@ -10,6 +10,7 @@ from .serializers import (
     EntradaInventarioSerializer, DetalleEntradaInventarioSerializer, InventarioSerializer,
     PerdidaSerializer, DetallePerdidaSerializer, SolicitudDevolucionSerializer, DetalleSolicitudDevolucionSerializer
 )
+from django.utils import timezone
 
 class EntradaInventarioViewSet(viewsets.ModelViewSet):
     queryset = EntradaInventario.objects.all()
@@ -20,6 +21,21 @@ class DetalleEntradaInventarioViewSet(viewsets.ModelViewSet):
     queryset = DetalleEntradaInventario.objects.all()
     serializer_class = DetalleEntradaInventarioSerializer
     permission_classes = [IsAuthenticated, IsAdminRole]
+
+    @transaction.atomic
+    def perform_create(self, serializer):
+        detalle = serializer.save()
+
+        inventarios = [
+            Inventario(
+                IdDetalleEntrada=detalle,
+                Estado="Disponible",
+                FechaMovimiento=timezone.now()
+            )
+            for _ in range(detalle.Cantidad)
+        ]
+
+        Inventario.objects.bulk_create(inventarios)
 
 class InventarioViewSet(viewsets.ModelViewSet):
     queryset = Inventario.objects.all()

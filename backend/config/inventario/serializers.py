@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import EntradaInventario, DetalleEntradaInventario, Inventario, Perdida, DetallePerdida, SolicitudDevolucion, DetalleSolicitudDevolucion
 from catalogo.models import Proveedor, Producto
 from usuarios.models import Usuario
+from django.utils import timezone
 
 class EntradaInventarioSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='IdEntradaInventario', read_only=True)
@@ -25,6 +26,7 @@ class DetalleEntradaInventarioSerializer(serializers.ModelSerializer):
         model = DetalleEntradaInventario
         fields = ['id', 'entradaInventarioId', 'productoId', 'cantidad', 'precioCompraUnitario']
 
+    
 class InventarioSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='IdInventario', read_only=True)
     detalleEntradaId = serializers.PrimaryKeyRelatedField(source='IdDetalleEntrada', queryset=DetalleEntradaInventario.objects.all())
@@ -34,6 +36,7 @@ class InventarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Inventario
         fields = ['id', 'detalleEntradaId', 'estado', 'fechaMovimiento']
+
 
 class PerdidaSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='IdPerdida', read_only=True)

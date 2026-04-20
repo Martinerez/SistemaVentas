@@ -16,6 +16,9 @@ venv/
 __pycache__/
 *.pyc
 
+# Django
+db.sqlite3
+
 # IDE
 .vscode/
 .idea/

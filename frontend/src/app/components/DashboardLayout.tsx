@@ -34,20 +34,22 @@ export function DashboardLayout() {
   // Menu items only for admin
   const adminItems = [
     { icon: Package, label: "Productos", path: "/productos" },
-    { icon: Briefcase, label: "Proveedores", path: "/proveedores" },
     { icon: Truck, label: "Pedidos", path: "/pedidos" },
     { icon: TrendingDown, label: "Pérdidas", path: "/perdidas" },
     { icon: RefreshCcw, label: "Devoluciones", path: "/devoluciones" },
     { icon: Users, label: "Usuarios", path: "/usuarios" },
     { icon: Settings, label: "Ajustes", path: "/ajustes" },
-   { icon: BookOpen, label: "Guía Usuario", path: "/guia-usuario" },
+    { icon: BookOpen, label: "Guía Usuario", path: "/guia-usuario" },
   ];
 
-  const menuItems = userRole === "admin" ? [...commonItems, ...adminItems] : commonItems;
+  const menuItems =
+    userRole === "admin" ? [...commonItems, ...adminItems] : commonItems;
 
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <>
-      <div className={`p-6 border-b ${mobile ? "flex items-center justify-between" : ""}`}>
+      <div
+        className={`p-6 border-b ${mobile ? "flex items-center justify-between" : ""}`}
+      >
         <div className="flex items-center gap-3">
           <div className="size-10 bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg flex items-center justify-center shadow-lg">
             <Store className="size-6 text-white" />
@@ -151,8 +153,12 @@ export function DashboardLayout() {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-3 pl-3 border-l">
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm font-medium text-slate-800">{userName || "Usuario"}</p>
-                  <p className="text-xs font-semibold capitalize px-2 py-0.5 rounded-full inline-block mt-0.5 bg-slate-100 text-slate-600">{userRole || ""}</p>
+                  <p className="text-sm font-medium text-slate-800">
+                    {userName || "Usuario"}
+                  </p>
+                  <p className="text-xs font-semibold capitalize px-2 py-0.5 rounded-full inline-block mt-0.5 bg-slate-100 text-slate-600">
+                    {userRole || ""}
+                  </p>
                 </div>
                 <div className="size-10 bg-gradient-to-br from-slate-700 to-slate-900 rounded-full flex items-center justify-center shadow-md">
                   <User className="size-5 text-white" />

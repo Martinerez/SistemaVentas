@@ -67,7 +67,7 @@ export function Productos() {
   const [newProductName, setNewProductName] = useState("Refresco Cola");
   const [newProductCategory, setNewProductCategory] = useState("2");
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [newCategoryProfit, setNewCategoryProfit] = useState("3");
+  const [newCategoryProfit, setNewCategoryProfit] = useState("10");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchCategory, setSearchCategory] = useState("");
 
@@ -100,7 +100,9 @@ export function Productos() {
 
   const fetchCategories = async () => {
     try {
-      const response = await api.get("http://localhost:8000/api/catalogo/categorias/");
+      const response = await api.get(
+        "http://localhost:8000/api/catalogo/categorias/",
+      );
       const data = response.data.results ?? response.data;
       setCategories(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -110,7 +112,9 @@ export function Productos() {
 
   const fetchProducts = async () => {
     try {
-      const response = await api.get("http://localhost:8000/api/catalogo/productos/");
+      const response = await api.get(
+        "http://localhost:8000/api/catalogo/productos/",
+      );
       const data = response.data.results ?? response.data;
       setProducts(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -145,7 +149,9 @@ export function Productos() {
   const handleConfirmDelete = async () => {
     if (deleteAlert.productId) {
       try {
-        await api.delete(`http://localhost:8000/api/catalogo/productos/${deleteAlert.productId}/`);
+        await api.delete(
+          `http://localhost:8000/api/catalogo/productos/${deleteAlert.productId}/`,
+        );
         setProducts(products.filter((p) => p.id !== deleteAlert.productId));
         setDeleteAlert({
           isOpen: false,
@@ -175,7 +181,7 @@ export function Productos() {
         };
         const response = await api.patch(
           `http://localhost:8000/api/catalogo/productos/${editingProduct.id}/`,
-          payload
+          payload,
         );
         fetchProducts(); // Refresh to get calculated fields like stock/price
         setIsEditProductOpen(false);
@@ -210,7 +216,10 @@ export function Productos() {
           name: newCategoryName,
           profitPercentage: parseFloat(newCategoryProfit) || 3,
         };
-        await api.post("http://localhost:8000/api/catalogo/categorias/", payload);
+        await api.post(
+          "http://localhost:8000/api/catalogo/categorias/",
+          payload,
+        );
         fetchCategories();
         setIsAddCategoryOpen(false);
         setNewCategoryName("");
@@ -255,7 +264,7 @@ export function Productos() {
         };
         await api.patch(
           `http://localhost:8000/api/catalogo/categorias/${editingCategory.id}/`,
-          payload
+          payload,
         );
         fetchCategories();
         setIsEditCategoryOpen(false);
@@ -269,7 +278,9 @@ export function Productos() {
   const handleConfirmDeleteCategory = async () => {
     if (deleteCategoryAlert.categoryId) {
       try {
-        await api.delete(`http://localhost:8000/api/catalogo/categorias/${deleteCategoryAlert.categoryId}/`);
+        await api.delete(
+          `http://localhost:8000/api/catalogo/categorias/${deleteCategoryAlert.categoryId}/`,
+        );
         setCategories(
           categories.filter((cat) => cat.id !== deleteCategoryAlert.categoryId),
         );
