@@ -4,27 +4,30 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from datetime import timedelta
-from django.db import transaction
+from django.db import transaction, connection
 from django.db.models import Sum, Count, Q
 from django.db.models.functions import TruncDate
 
 from .models import Venta, DetalleVenta
-from .serializers import VentaSerializer, DetalleVentaSerializer
 from catalogo.models import Producto, Proveedor
 from inventario.models import Inventario
 from usuarios.models import Usuario
 from usuarios.permissions import IsAdminRole
+from .serializers import VentaSerializer, DetalleVentaSerializer
 
+# --- VIEWSETS PARA CRUD ---
 class VentaViewSet(viewsets.ModelViewSet):
     queryset = Venta.objects.all()
     serializer_class = VentaSerializer
     permission_classes = [IsAuthenticated, IsAdminRole]
+    pagination_class = None
 
 class DetalleVentaViewSet(viewsets.ModelViewSet):
     queryset = DetalleVenta.objects.all()
     serializer_class = DetalleVentaSerializer
     permission_classes = [IsAuthenticated, IsAdminRole]
 
+# --- PROCESAR VENTA ---
 class ProcesarVentaView(APIView):
     permission_classes = [IsAuthenticated, IsAdminRole]
 
@@ -37,109 +40,57 @@ class ProcesarVentaView(APIView):
         
         try:
             usuario = Usuario.objects.get(IdUsuario=usuario_id)
-            
-            # Crear la Venta
-            venta = Venta.objects.create(
-                IdUsuario=usuario,
-                Fecha=fecha,
-                Total=total
-            )
-            
+            venta = Venta.objects.create(IdUsuario=usuario, Fecha=fecha, Total=total)
             for d in detalles:
                 inv_id = d.get('inventarioId')
                 precio = d.get('precioVentaUnitario')
-                
-                # Lock row to prevent race conditions (double sale of same inventory item)
                 inventario = Inventario.objects.select_for_update().get(IdInventario=inv_id)
-                if inventario.Estado != "Disponible":
-                    raise ValueError(f"El ítem de inventario {inv_id} ya no está Disponible (Estado actual: {inventario.Estado}).")
-                    
-                DetalleVenta.objects.create(
-                    IdVenta=venta,
-                    IdInventario=inventario,
-                    PrecioVentaUnitario=precio
-                )
-                
+                DetalleVenta.objects.create(IdVenta=venta, IdInventario=inventario, PrecioVentaUnitario=precio)
                 inventario.Estado = "Vendido"
                 inventario.save()
-                
-            return Response({"message": "Venta procesada exitosamente", "ventaId": venta.IdVenta}, status=status.HTTP_201_CREATED)
-        except Usuario.DoesNotExist:
-            return Response({"error": "Usuario no encontrado."}, status=status.HTTP_404_NOT_FOUND)
-        except Inventario.DoesNotExist:
-            return Response({"error": "Ítem de inventario no encontrado."}, status=status.HTTP_404_NOT_FOUND)
-        except ValueError as ve:
-            return Response({"error": str(ve)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Venta exitosa"}, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return Response({"error": f"Error interno: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+# --- DASHBOARD---
 class DashboardStatsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
     def get(self, request):
         now = timezone.now()
         seven_days_ago = now - timedelta(days=7)
 
-        # 1. Total de Productos Activos (en Catálogo)
         total_products = Producto.objects.count()
-
-        # 2. Ventas de los últimos 7 días
         ventas_semana = Venta.objects.filter(Fecha__gte=seven_days_ago)
         weekly_sales = ventas_semana.aggregate(total=Sum('Total'))['total'] or 0
+        total_proveedores = Proveedor.objects.count()
 
-        # 3. Proveedores Activos
-        total_proveedores = Proveedor.objects.filter(Estado='Activo').count()
-
-        # 4. Stock Bajo (Productos con < 10 items Disponibles)
-        # Using reverse relations from Producto -> DetalleEntradaInventario -> Inventario
         low_stock_qs = Producto.objects.annotate(
-            stock=Count(
-                'detalleentradainventario__inventario', 
-                filter=Q(detalleentradainventario__inventario__Estado='Disponible')
-            )
+            stock=Count('detalleentradainventario__inventario', 
+                  filter=Q(detalleentradainventario__inventario__Estado='Disponible'))
         ).filter(stock__lt=10).order_by('stock')[:5]
 
-        low_stock_items = [
-            {
-                "id": p.IdProducto,
-                "name": p.Nombre,
-                "stock": p.stock,
-                "min": 10,
-                "category": p.IdCategoria.Nombre if p.IdCategoria else "General"
-            }
-            for p in low_stock_qs
-        ]
+        low_stock_items = [{
+            "id": p.IdProducto,
+            "name": p.Nombre,
+            "stock": p.stock,
+            "category": p.IdCategoria.Nombre if p.IdCategoria else "General"
+        } for p in low_stock_qs]
 
-        # 5. Ventas recientes (Últimas 5) para la tabla del Dashboard
         recent_sales_qs = Venta.objects.order_by('-Fecha')[:5]
-        recent_sales = [
-            {
-                "id": v.IdVenta,
-                "time": v.Fecha.strftime("%I:%M %p"),
-                "items": v.detalleventa_set.count(),
-                "total": f"${v.Total}"
-            }
-            for v in recent_sales_qs
-        ]
+        recent_sales = [{
+            "id": v.IdVenta,
+            "time": v.Fecha.strftime("%I:%M %p"),
+            "items": v.detalleventa_set.count(),
+            "total": float(v.Total)
+        } for v in recent_sales_qs]
 
-        # 6. Chart data (ventas diarias)
         sales_by_date = ventas_semana.annotate(date=TruncDate('Fecha')).values('date').annotate(
             total=Sum('Total')
         ).order_by('date')
         
-        chart_data = [
-            {
-                "date": s['date'].strftime('%A')[:3], # Mon, Tue, etc.
-                "total": float(s['total'])
-            }
-            for s in sales_by_date
-        ]
-
-        # Add mock chart data if not enough data yet for visualization context
-        if len(chart_data) == 0:
-            chart_data = [
-                {"date": "Lun", "total": 0},
-                {"date": "Mar", "total": 0},
-                {"date": "Mie", "total": 0},
-            ]
+        chart_data = [{"date": s['date'].strftime('%a'), "total": float(s['total'])} for s in sales_by_date]
+        if not chart_data: chart_data = [{"date": "Hoy", "total": 0}]
 
         return Response({
             "totalProducts": total_products,
@@ -149,3 +100,43 @@ class DashboardStatsView(APIView):
             "recentSales": recent_sales,
             "chartData": chart_data
         })
+
+# --- REPORTES AVANZADOS ---
+class ReporteGerencialView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+    def get(self, request):
+        inicio, fin = request.query_params.get('inicio'), request.query_params.get('fin')
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM reporte_gerencial(%s, %s)", [inicio, fin])
+            row = cursor.fetchone()
+        return Response({
+            "total_ventas": float(row[0]) if row and row[0] else 0,
+            "promedio_venta": float(row[1]) if row and row[1] else 0,
+            "producto_mas_vendido": row[2] if row and row[2] else "N/A"
+        })
+
+class ReportePivotVentasView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+    def get(self, request):
+        anio, prod_id = request.query_params.get('anio'), request.query_params.get('productoId')
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM reporte_mensual_producto_pivot(%s, %s)", [anio, prod_id])
+            columns = [col[0] for col in cursor.description]
+            row = cursor.fetchone()
+        if row: return Response(dict(zip(columns, row)))
+        return Response({"producto": "Sin datos", "ene":0, "feb":0, "mar":0, "abr":0, "may":0, "jun":0, "jul":0, "ago":0, "sep":0, "oct":0, "nov":0, "dic":0})
+    
+class ProductosPorProveedorView(APIView):
+     permission_classes = [IsAuthenticated, IsAdminRole]
+
+     def get(self, request):
+        proveedor_id = request.query_params.get('proveedorId')
+        if not proveedor_id:
+            return Response({"error": "Falta proveedorId"}, status=400)
+
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT * FROM reporte_productos_por_proveedor(%s)", [proveedor_id])
+            columns = [col[0] for col in cursor.description]
+            result = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        return Response(result)

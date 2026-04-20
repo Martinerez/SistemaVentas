@@ -1,6 +1,11 @@
 from django.db import models
+from django.utils import timezone
 from catalogo.models import Proveedor, Producto
 from usuarios.models import Usuario
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+# ─── MODELOS DE ENTRADAS ──────────────────────────────────────────
 
 class EntradaInventario(models.Model):
     IdEntradaInventario = models.AutoField(primary_key=True)
@@ -11,6 +16,7 @@ class EntradaInventario(models.Model):
 
     class Meta:
         db_table = 'EntradaInventario'
+        ordering = ['-IdEntradaInventario']
 
 class DetalleEntradaInventario(models.Model):
     IdDetalleEntrada = models.AutoField(primary_key=True)
@@ -21,6 +27,9 @@ class DetalleEntradaInventario(models.Model):
 
     class Meta:
         db_table = 'DetalleEntradaInventario'
+        ordering = ['-IdDetalleEntrada']
+
+# ─── MODELO DE INVENTARIO FÍSICO ──────────────────────────────────
 
 class Inventario(models.Model):
     ESTADO_CHOICES = (
@@ -32,10 +41,13 @@ class Inventario(models.Model):
     IdInventario = models.AutoField(primary_key=True)
     IdDetalleEntrada = models.ForeignKey(DetalleEntradaInventario, on_delete=models.RESTRICT, db_column='IdDetalleEntrada')
     Estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Disponible', null=False, blank=False)
-    FechaMovimiento = models.DateTimeField(null=False, blank=False)
+    FechaMovimiento = models.DateTimeField(null=False, blank=False, default=timezone.now)
 
     class Meta:
         db_table = 'Inventario'
+        ordering = ['-IdInventario']
+
+# ─── MODELOS DE PÉRDIDAS ──────────────────────────────────────────
 
 class Perdida(models.Model):
     TIPO_PERDIDA_CHOICES = (
@@ -50,6 +62,7 @@ class Perdida(models.Model):
 
     class Meta:
         db_table = 'Perdida'
+        ordering = ['-IdPerdida']
 
 class DetallePerdida(models.Model):
     IdDetallePerdida = models.AutoField(primary_key=True)
@@ -59,6 +72,9 @@ class DetallePerdida(models.Model):
 
     class Meta:
         db_table = 'DetallePerdida'
+        ordering = ['-IdDetallePerdida']
+
+# ─── MODELOS DE DEVOLUCIONES ──────────────────────────────────────
 
 class SolicitudDevolucion(models.Model):
     ESTADO_CHOICES = (
@@ -76,6 +92,7 @@ class SolicitudDevolucion(models.Model):
 
     class Meta:
         db_table = 'SolicitudDevolucion'
+        ordering = ['-IdSolicitudDevolucion']
 
 class DetalleSolicitudDevolucion(models.Model):
     ESTADO_ITEM_CHOICES = (
@@ -92,3 +109,17 @@ class DetalleSolicitudDevolucion(models.Model):
 
     class Meta:
         db_table = 'DetalleSolicitudDevolucion'
+        ordering = ['-IdDetalleSolicitudDevolucion']
+
+# Este código se ejecuta automáticamente después de guardar un detalle de entrada
+@receiver(post_save, sender=DetalleEntradaInventario)
+def crear_items_inventario(sender, instance, created, **kwargs):
+    if created:
+        # Generar automáticamente los registros físicos en la tabla Inventario
+        # basados en la Cantidad especificada en la compra
+        for _ in range(instance.Cantidad):
+            Inventario.objects.create(
+                IdDetalleEntrada=instance,
+                Estado='Disponible',
+                FechaMovimiento=timezone.now()
+            )
