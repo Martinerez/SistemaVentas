@@ -171,13 +171,13 @@ export function Ventas() {
         </div>
         <div className="flex gap-4 border-b">
           <button
-            className={`pb-2 px-4 text-sm font-semibold transition-colors ${activeTab === 'pos' ? 'border-b-2 border-green-600 text-green-700' : 'text-gray-500 hover:text-slate-700'}`}
+            className={`pb-2 px-4 text-sm font-semibold transition-colors C${activeTab === 'pos' ? 'border-b-2 border-green-600 text-green-700' : 'text-gray-500 hover:text-slate-700'}`}
             onClick={() => setActiveTab('pos')}
           >
             Terminal POS
           </button>
           <button
-            className={`pb-2 px-4 text-sm font-semibold transition-colors ${activeTab === 'historial' ? 'border-b-2 border-green-600 text-green-700' : 'text-gray-500 hover:text-slate-700'}`}
+            className={`pb-2 px-4 text-sm font-semibold transition-colors C${activeTab === 'historial' ? 'border-b-2 border-green-600 text-green-700' : 'text-gray-500 hover:text-slate-700'}`}
             onClick={() => setActiveTab('historial')}
           >
             Historial de Ventas
@@ -209,7 +209,7 @@ export function Ventas() {
                   className="p-4 border-0 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group bg-gradient-to-br from-white to-gray-50"
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <span className="font-bold text-lg text-slate-800">${Number(p.salePrice).toFixed(2)}</span>
+                    <span className="font-bold text-lg text-slate-800">C${Number(p.salePrice).toFixed(2)}</span>
                     <span className="text-xs font-semibold bg-green-100 text-green-800 px-2 py-1 rounded-full">
                       Stock: {p.availableQty}
                     </span>
@@ -270,11 +270,11 @@ export function Ventas() {
               <div className="p-6 bg-white border-t border-gray-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                 <div className="flex justify-between mb-4">
                   <span className="text-gray-600 font-medium">Subtotal</span>
-                  <span className="font-semibold">${totalCart.toFixed(2)}</span>
+                  <span className="font-semibold">C${totalCart.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between mb-6">
                   <span className="text-2xl font-bold text-slate-800">Total</span>
-                  <span className="text-3xl font-black text-green-600">${totalCart.toFixed(2)}</span>
+                  <span className="text-3xl font-black text-green-600">C${totalCart.toFixed(2)}</span>
                 </div>
                 <Button 
                   onClick={handleCheckout}
@@ -324,7 +324,7 @@ export function Ventas() {
                       </TableCell>
                       <TableCell>Responsable ID: {venta.usuarioId}</TableCell>
                       <TableCell className="text-right font-bold text-green-700 text-lg">
-                        ${Number(venta.total).toFixed(2)}
+                        C${Number(venta.total).toFixed(2)}
                       </TableCell>
                     </TableRow>
                   ))

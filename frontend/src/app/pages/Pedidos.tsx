@@ -495,7 +495,7 @@ export function Pedidos() {
 
             {/* ========================= TOTAL ========================= */}
             <div className="flex justify-between border-t pt-4">
-              <p className="font-bold">Total: ${calcTotal().toFixed(2)}</p>
+              <p className="font-bold">Total: C${calcTotal().toFixed(2)}</p>
 
               <div className="flex gap-3">
                 <Button

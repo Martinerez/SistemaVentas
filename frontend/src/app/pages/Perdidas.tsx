@@ -155,7 +155,7 @@ export function Perdidas() {
                 <TableHead>Fecha</TableHead>
                 <TableHead>Motivo / Tipo</TableHead>
                 <TableHead>Resp. Usuario</TableHead>
-                <TableHead className="text-right">Pérdida ($)</TableHead>
+                <TableHead className="text-right">Pérdida (C$)</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -178,7 +178,7 @@ export function Perdidas() {
                     </TableCell>
                     <TableCell>Admin (ID {p.usuarioId})</TableCell>
                     <TableCell className="text-right font-bold text-red-600">
-                      -${Number(p.total).toFixed(2)}
+                      -C${Number(p.total).toFixed(2)}
                     </TableCell>
                   </TableRow>
                 ))
@@ -241,7 +241,7 @@ export function Perdidas() {
             {selectedInventarioId && (
               <div className="p-3 bg-red-50 border border-red-100 rounded-lg flex justify-between items-center text-sm">
                 <span className="text-red-800 font-medium">Costo de Merma:</span>
-                <span className="text-red-700 font-bold">${getProductPriceByInventarioId(parseInt(selectedInventarioId)).toFixed(2)}</span>
+                <span className="text-red-700 font-bold">C${getProductPriceByInventarioId(parseInt(selectedInventarioId)).toFixed(2)}</span>
               </div>
             )}
 

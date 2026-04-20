@@ -270,7 +270,7 @@ export function Devoluciones() {
                       </TableCell>
                       <TableCell>
                         <span
-                          className={`px-2 py-1 text-xs rounded-full font-semibold ${
+                          className={`px-2 py-1 text-xs rounded-full font-semibold C${
                             estado === "Aprobada"
                               ? "bg-green-100 text-green-800"
                               : estado === "Rechazada"

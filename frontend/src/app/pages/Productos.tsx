@@ -150,7 +150,7 @@ export function Productos() {
     if (deleteAlert.productId) {
       try {
         await api.delete(
-          `http://localhost:8000/api/catalogo/productos/${deleteAlert.productId}/`,
+          `http://localhost:8000/api/catalogo/productos/C${deleteAlert.productId}/`,
         );
         setProducts(products.filter((p) => p.id !== deleteAlert.productId));
         setDeleteAlert({
@@ -180,7 +180,7 @@ export function Productos() {
           categoryId: parseInt(editingProduct.categoryId),
         };
         const response = await api.patch(
-          `http://localhost:8000/api/catalogo/productos/${editingProduct.id}/`,
+          `http://localhost:8000/api/catalogo/productos/C${editingProduct.id}/`,
           payload,
         );
         fetchProducts(); // Refresh to get calculated fields like stock/price
@@ -263,7 +263,7 @@ export function Productos() {
           profitPercentage: parseFloat(editingCategory.profitPercentage) || 3,
         };
         await api.patch(
-          `http://localhost:8000/api/catalogo/categorias/${editingCategory.id}/`,
+          `http://localhost:8000/api/catalogo/categorias/C${editingCategory.id}/`,
           payload,
         );
         fetchCategories();
@@ -279,7 +279,7 @@ export function Productos() {
     if (deleteCategoryAlert.categoryId) {
       try {
         await api.delete(
-          `http://localhost:8000/api/catalogo/categorias/${deleteCategoryAlert.categoryId}/`,
+          `http://localhost:8000/api/catalogo/categorias/C${deleteCategoryAlert.categoryId}/`,
         );
         setCategories(
           categories.filter((cat) => cat.id !== deleteCategoryAlert.categoryId),
@@ -463,7 +463,7 @@ export function Productos() {
                       </TableCell>
                       <TableCell>
                         <span
-                          className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                          className={`px-3 py-1 rounded-full text-sm font-semibold C${
                             product.stock === 0
                               ? "bg-red-100 text-red-700"
                               : product.stock < 10
@@ -476,7 +476,7 @@ export function Productos() {
                         </span>
                       </TableCell>
                       <TableCell className="font-semibold text-slate-800">
-                        ${product.salePrice.toFixed(2)}
+                        C${product.salePrice.toFixed(2)}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
@@ -761,7 +761,7 @@ export function Productos() {
             <AlertDialogDescription className="text-base">
               {deleteAlert.hasStock
                 ? "Este producto no se puede eliminar porque tiene existencia en stock."
-                : `¿Está seguro de que desea eliminar el producto "${deleteAlert.productName}"?`}
+                : `¿Está seguro de que desea eliminar el producto "C${deleteAlert.productName}"?`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
