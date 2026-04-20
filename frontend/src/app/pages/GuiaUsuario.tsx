@@ -67,7 +67,7 @@ const datosManual: Seccion[] = [
     descripcion: 'Cómo procesar las compras de tus clientes de forma rápida.',
     icono: <Iconos.Ventas />,
     detalles: [
-      'Utiliza la barra superior para buscar productos por código o nombre.',
+      'Utiliza la barra superior para buscar productos disponibles por su nombre.',
       'Selecciona los artículos para agregarlos a la "Orden Actual".',
       'Ajusta las cantidades utilizando los controles en el panel lateral.',
       'Verifica el total y presiona el botón de cobro para finalizar la transacción.'
@@ -80,7 +80,7 @@ const datosManual: Seccion[] = [
     icono: <Iconos.Productos />,
     detalles: [
       'Crea categorías para mantener el inventario organizado.',
-      'Registra nuevos productos asignando precios de compra y venta.',
+      'Registra nuevos productos asignando su categoría.',
       'Modifica o da de baja artículos directamente desde la tabla principal.'
     ]
   },
@@ -90,7 +90,7 @@ const datosManual: Seccion[] = [
     descripcion: 'Registro de compras y abastecimiento de mercancía.',
     icono: <Iconos.Inventario />,
     detalles: [
-      'Selecciona "Nueva Entrada" en el módulo de pedidos.',
+      'Selecciona "Nuevo pedido" en el módulo de pedidos.',
       'Asigna la compra a un proveedor registrado.',
       'Ingresa las cantidades recibidas para que el stock se actualice automáticamente.'
     ]
@@ -103,7 +103,7 @@ const datosManual: Seccion[] = [
     detalles: [
       'Ingresa al módulo de pérdidas para reportar artículos no vendibles.',
       'Especifica la cantidad y el motivo para mantener la exactitud del inventario.',
-      'Gestiona las devoluciones a los proveedores indicando si el producto regresa a stock o se desecha.'
+      'En el módulo devoluciones, gestiona las devoluciones a los proveedores indicando si el producto es aprobado o no para su devolución.'
     ]
   }
 ];
