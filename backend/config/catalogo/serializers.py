@@ -20,7 +20,7 @@ class CategoriaSerializer(serializers.ModelSerializer):
         return obj.producto_set.count()
 
 
-# 🔥 PROVEEDOR (TODO EN UNO)
+# PROVEEDOR
 class ProveedorSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='IdProveedor', read_only=True)
     name = serializers.CharField(source='Nombre')
@@ -45,7 +45,7 @@ class ProveedorSerializer(serializers.ModelSerializer):
         hace_30_dias = timezone.now() - timedelta(days=30)
 
         return EntradaInventario.objects.filter(
-            IdProveedor=obj,  # 🔥 CORREGIDO (antes estaba mal)
+            IdProveedor=obj,  
             FechaEntrada__gte=hace_30_dias
         ).count()
 

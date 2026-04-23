@@ -20,7 +20,7 @@ export function Reportes() {
   const [productosProveedor, setProductosProveedor] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Estado para la elección del usuario (La pregunta de los 3 reportes)
+  // Estado para la elección del usuario --La pregunta de los 3 reportes
   const [seleccionVista, setSeleccionVista] = useState<'1' | '2' | '3' | 'todos'>('todos');
 
   useEffect(() => {
@@ -79,7 +79,7 @@ export function Reportes() {
     } finally { setLoading(false); }
   };
 
-  // EXCEL ESTÉTICO CON EXCELJS
+  //DOCUMENTO DE EXCEL CON EXCELJS
   const exportarExcelEstetico = async () => {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Reporte de Miscelánea');
