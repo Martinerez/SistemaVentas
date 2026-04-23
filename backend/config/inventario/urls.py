@@ -9,7 +9,8 @@ from .views import (
     SolicitudDevolucionViewSet,
     DetalleSolicitudDevolucionViewSet,
     ProcesarPerdidaView,
-    ProcesarDevolucionView
+    ProcesarDevolucionView,
+    DevolverStockView
 )
 
 router = DefaultRouter()
@@ -25,6 +26,7 @@ urlpatterns = [
     # 🔥 APIs personalizadas (lógica)
     path('procesar-perdida/', ProcesarPerdidaView.as_view(), name='procesar-perdida'),
     path('procesar-devolucion/', ProcesarDevolucionView.as_view(), name='procesar-devolucion'),
+    path('devolver-stock/', DevolverStockView.as_view(), name='devolver-stock'),
 
     # 🔹 CRUD automático
     path('', include(router.urls)),

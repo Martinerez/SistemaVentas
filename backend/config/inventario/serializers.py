@@ -79,18 +79,6 @@ class DetallePerdidaSerializer(serializers.ModelSerializer):
         model = DetallePerdida
         fields = ['id', 'perdidaId', 'inventarioId', 'precioCompraUnitario']
 
-class SolicitudDevolucionSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(source='IdSolicitudDevolucion', read_only=True)
-    entradaInventarioId = serializers.PrimaryKeyRelatedField(source='IdEntradaInventario', queryset=EntradaInventario.objects.all())
-    usuarioId = serializers.PrimaryKeyRelatedField(source='IdUsuario', queryset=Usuario.objects.all())
-    estado = serializers.CharField(source='Estado', required=False)
-    observaciones = serializers.CharField(source='Observaciones', required=False, allow_null=True)
-    fecha = serializers.DateTimeField(source='Fecha')
-
-    class Meta:
-        model = SolicitudDevolucion
-        fields = ['id', 'entradaInventarioId', 'usuarioId', 'estado', 'observaciones', 'fecha']
-
 class DetalleSolicitudDevolucionSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='IdDetalleSolicitudDevolucion', read_only=True)
     solicitudDevolucionId = serializers.PrimaryKeyRelatedField(source='IdSolicitudDevolucion', queryset=SolicitudDevolucion.objects.all())
@@ -98,7 +86,25 @@ class DetalleSolicitudDevolucionSerializer(serializers.ModelSerializer):
     motivoRechazo = serializers.CharField(source='MotivoRechazo', required=False, allow_null=True)
     precioCompraUnitario = serializers.DecimalField(source='PrecioCompraUnitario', max_digits=12, decimal_places=2)
     estadoItem = serializers.CharField(source='EstadoItem', required=False)
+    productoNombre = serializers.CharField(source="IdInventario.IdDetalleEntrada.IdProducto.Nombre", read_only=True)
 
     class Meta:
         model = DetalleSolicitudDevolucion
-        fields = ['id', 'solicitudDevolucionId', 'inventarioId', 'motivoRechazo', 'precioCompraUnitario', 'estadoItem']
+        fields = ['id', 'solicitudDevolucionId', 'inventarioId', 'motivoRechazo', 'precioCompraUnitario', 'estadoItem', 'productoNombre']
+
+class SolicitudDevolucionSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='IdSolicitudDevolucion', read_only=True)
+    entradaInventarioId = serializers.PrimaryKeyRelatedField(source='IdEntradaInventario', queryset=EntradaInventario.objects.all())
+    usuarioId = serializers.PrimaryKeyRelatedField(source='IdUsuario', queryset=Usuario.objects.all())
+    estado = serializers.CharField(source='Estado', required=False)
+    observaciones = serializers.CharField(source='Observaciones', required=False, allow_null=True)
+    fecha = serializers.DateTimeField(source='Fecha')
+    detalles = DetalleSolicitudDevolucionSerializer(
+        source='detallesolicituddevolucion_set',
+        many=True,
+        read_only=True
+    )
+
+    class Meta:
+        model = SolicitudDevolucion
+        fields = ['id', 'entradaInventarioId', 'usuarioId', 'estado', 'observaciones', 'fecha', 'detalles']

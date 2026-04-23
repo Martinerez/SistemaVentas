@@ -102,6 +102,18 @@ class SolicitudDevolucionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdminRole]
     pagination_class = None
 
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.Estado != 'Pendiente':
+            return Response({"error": "No se puede modificar una solicitud que ya no está pendiente."}, status=status.HTTP_400_BAD_REQUEST)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.Estado != 'Pendiente':
+            return Response({"error": "No se puede modificar una solicitud que ya no está pendiente."}, status=status.HTTP_400_BAD_REQUEST)
+        return super().partial_update(request, *args, **kwargs)
+
 class DetalleSolicitudDevolucionViewSet(viewsets.ModelViewSet):
     queryset = DetalleSolicitudDevolucion.objects.all()
     serializer_class = DetalleSolicitudDevolucionSerializer
@@ -155,9 +167,57 @@ class ProcesarDevolucionView(APIView):
         
         try:
             usuario = Usuario.objects.get(IdUsuario=usuario_id)
-            # Lógica simplificada para que no falle el import
-            return Response({"message": "Endpoint de devolución activo"}, status=status.HTTP_201_CREATED)
+            entrada_id = request.data.get('IdEntradaInventario')
+            entrada = EntradaInventario.objects.get(IdEntradaInventario=entrada_id)
+            
+            solicitud = SolicitudDevolucion.objects.create(
+                IdEntradaInventario=entrada,
+                IdUsuario=usuario,
+                Estado=request.data.get('Estado', 'Pendiente'),
+                Observaciones=request.data.get('Observaciones', ''),
+                Fecha=fecha
+            )
+            for d in detalles:
+                inv_id = d.get('inventarioId')
+                precio = d.get('PrecioCompraUnitario')
+                motivo = d.get('MotivoRechazo')
+                inventario = Inventario.objects.get(IdInventario=inv_id)
+                DetalleSolicitudDevolucion.objects.create(
+                    IdSolicitudDevolucion=solicitud,
+                    IdInventario=inventario,
+                    MotivoRechazo=motivo,
+                    PrecioCompraUnitario=precio,
+                    EstadoItem=d.get('EstadoItem', 'Pendiente')
+                )
+                # Actualizar estado para que no salga más en el panel
+                inventario.Estado = 'Devuelto'
+                inventario.save()
+            return Response({"message": "Solicitud de devolución procesada."}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-            return Response({"error": f"Error interno: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class DevolverStockView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    @transaction.atomic
+    def post(self, request):
+        solicitud_id = request.data.get('solicitud_id')
+        try:
+            solicitud = SolicitudDevolucion.objects.get(IdSolicitudDevolucion=solicitud_id)
+            if solicitud.Estado != 'Aceptada':
+                return Response({"error": "La solicitud debe estar Aceptada para devolver stock."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            detalles = DetalleSolicitudDevolucion.objects.filter(IdSolicitudDevolucion=solicitud)
+            for det in detalles:
+                inventario = det.IdInventario
+                inventario.Estado = 'Disponible'
+                inventario.save()
+                
+                det.EstadoItem = 'Aceptado'
+                det.save()
+            return Response({"message": "Stock devuelto exitosamente."}, status=status.HTTP_200_OK)
+        except SolicitudDevolucion.DoesNotExist:
+            return Response({"error": "Solicitud no encontrada."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
