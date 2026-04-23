@@ -30,12 +30,12 @@ class UsuarioSerializer(serializers.ModelSerializer):
         password = validated_data.pop('Password', None)
 
         if password:
-           if instance.check_password(password):
-            raise serializers.ValidationError({
-                "password": "La nueva contraseña no puede ser igual a la actual"
-            })
-
-           instance.set_password(password)
+            if instance.check_password(password):
+                raise serializers.ValidationError({
+                    "password": "La nueva contraseña no puede ser igual a la actual"
+                })
+            # set_password fuera del if check_password: se ejecuta siempre que haya nueva contraseña
+            instance.set_password(password)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)

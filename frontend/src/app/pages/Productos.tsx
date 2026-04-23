@@ -13,7 +13,7 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card } from "../components/ui/card";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import api from "../api/axiosInstance";
 import {
   Dialog,
@@ -87,6 +87,19 @@ export function Productos() {
   }>({ isOpen: false, categoryId: null, categoryName: "", hasProducts: false });
 
   const [successMessage, setSuccessMessage] = useState(false);
+  // MEJ-010: ref para limpiar el timer si el componente se desmonta
+  const successTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (successMessage) {
+      successTimerRef.current = window.setTimeout(() => setSuccessMessage(false), 3000);
+    }
+    return () => {
+      if (successTimerRef.current !== null) {
+        clearTimeout(successTimerRef.current);
+      }
+    };
+  }, [successMessage]);
 
   const selectedCategoryData = categories.find(
     (cat) => cat.id === selectedCategory,
@@ -100,9 +113,7 @@ export function Productos() {
 
   const fetchCategories = async () => {
     try {
-      const response = await api.get(
-        "http://localhost:8000/api/catalogo/categorias/",
-      );
+      const response = await api.get("/catalogo/categorias/");
       const data = response.data.results ?? response.data;
       setCategories(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -112,9 +123,7 @@ export function Productos() {
 
   const fetchProducts = async () => {
     try {
-      const response = await api.get(
-        "http://localhost:8000/api/catalogo/productos/",
-      );
+      const response = await api.get("/catalogo/productos/");
       const data = response.data.results ?? response.data;
       setProducts(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -150,7 +159,7 @@ export function Productos() {
     if (deleteAlert.productId) {
       try {
         await api.delete(
-          `http://localhost:8000/api/catalogo/productos/${deleteAlert.productId}/`,
+          `/catalogo/productos/${deleteAlert.productId}/`,
         );
         setProducts(products.filter((p) => p.id !== deleteAlert.productId));
         setDeleteAlert({
@@ -159,8 +168,7 @@ export function Productos() {
           productName: "",
           hasStock: false,
         });
-        setSuccessMessage(true);
-        setTimeout(() => setSuccessMessage(false), 3000);
+        setSuccessMessage(true); // el useEffect se encarga del timer
       } catch (error) {
         console.error("Error deleting product:", error);
       }
@@ -180,7 +188,7 @@ export function Productos() {
           categoryId: parseInt(editingProduct.categoryId),
         };
         const response = await api.patch(
-          `http://localhost:8000/api/catalogo/productos/${editingProduct.id}/`,
+          `/catalogo/productos/${editingProduct.id}/`,
           payload,
         );
         fetchProducts(); // Refresh to get calculated fields like stock/price
@@ -198,7 +206,7 @@ export function Productos() {
         name: newProductName,
         categoryId: parseInt(newProductCategory),
       };
-      await api.post("http://localhost:8000/api/catalogo/productos/", payload);
+      await api.post("/catalogo/productos/", payload);
       fetchProducts();
       fetchCategories(); // Update product counts
       setIsAddProductOpen(false);
@@ -217,7 +225,7 @@ export function Productos() {
           profitPercentage: parseFloat(newCategoryProfit) || 3,
         };
         await api.post(
-          "http://localhost:8000/api/catalogo/categorias/",
+          "/catalogo/categorias/",
           payload,
         );
         fetchCategories();
@@ -263,7 +271,7 @@ export function Productos() {
           profitPercentage: parseFloat(editingCategory.profitPercentage) || 3,
         };
         await api.patch(
-          `http://localhost:8000/api/catalogo/categorias/${editingCategory.id}/`,
+          `/catalogo/categorias/${editingCategory.id}/`,
           payload,
         );
         fetchCategories();
@@ -279,7 +287,7 @@ export function Productos() {
     if (deleteCategoryAlert.categoryId) {
       try {
         await api.delete(
-          `http://localhost:8000/api/catalogo/categorias/${deleteCategoryAlert.categoryId}/`,
+          `/catalogo/categorias/${deleteCategoryAlert.categoryId}/`,
         );
         setCategories(
           categories.filter((cat) => cat.id !== deleteCategoryAlert.categoryId),

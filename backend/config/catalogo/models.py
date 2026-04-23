@@ -1,4 +1,6 @@
 from django.db import models
+from django.core.validators import MinValueValidator
+
 
 class Categoria(models.Model):
     ESTADO_CHOICES = (
@@ -7,7 +9,13 @@ class Categoria(models.Model):
     )
     IdCategoria = models.AutoField(primary_key=True)
     Nombre = models.CharField(max_length=255, unique=True, null=False, blank=False)
-    PorcentajeGanancia = models.DecimalField(max_digits=5, decimal_places=2, null=False, blank=False)
+    PorcentajeGanancia = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=False,
+        blank=False,
+        validators=[MinValueValidator(0)]
+    )
     Estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='Activo', null=False, blank=False)
 
     class Meta:

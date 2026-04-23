@@ -12,14 +12,14 @@ from .models import Venta, DetalleVenta
 from catalogo.models import Producto, Proveedor
 from inventario.models import Inventario, Perdida
 from usuarios.models import Usuario
-from usuarios.permissions import IsAdminRole
+from usuarios.permissions import IsAdminRole, IsAdminOrReadOnly, CanProcessSale
 from .serializers import VentaSerializer, DetalleVentaSerializer
 
 # --- VIEWSETS PARA CRUD ---
 class VentaViewSet(viewsets.ModelViewSet):
     queryset = Venta.objects.all()
     serializer_class = VentaSerializer
-    permission_classes = [IsAuthenticated, IsAdminRole]
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     pagination_class = None
 
 class DetalleVentaViewSet(viewsets.ModelViewSet):
@@ -29,7 +29,7 @@ class DetalleVentaViewSet(viewsets.ModelViewSet):
 
 # --- PROCESAR VENTA ---
 class ProcesarVentaView(APIView):
-    permission_classes = [IsAuthenticated, IsAdminRole]
+    permission_classes = [CanProcessSale]
 
     @transaction.atomic
     def post(self, request):
@@ -52,9 +52,44 @@ class ProcesarVentaView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-# --- DASHBOARD---
-class DashboardStatsView(APIView):
+# --- ANULAR VENTA ---
+class AnularVentaView(APIView):
     permission_classes = [IsAuthenticated, IsAdminRole]
+
+    @transaction.atomic
+    def post(self, request, pk):
+        try:
+            venta = Venta.objects.select_for_update().get(pk=pk)
+        except Venta.DoesNotExist:
+            return Response({"error": "Venta no encontrada."}, status=status.HTTP_404_NOT_FOUND)
+
+        if venta.Estado == 'Anulada':
+            return Response(
+                {"error": "Esta venta ya fue anulada previamente."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Revertir stock: marcar cada ítem de inventario como 'Disponible'
+        detalles = DetalleVenta.objects.filter(IdVenta=venta).select_related('IdInventario')
+        for detalle in detalles:
+            inventario = Inventario.objects.select_for_update().get(
+                IdInventario=detalle.IdInventario_id
+            )
+            inventario.Estado = 'Disponible'
+            inventario.FechaMovimiento = timezone.now()
+            inventario.save()
+
+        venta.Estado = 'Anulada'
+        venta.save()
+
+        return Response(
+            {"message": f"Venta #{pk} anulada correctamente. Stock revertido."},
+            status=status.HTTP_200_OK
+        )
+
+
+class DashboardStatsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
 
     def get(self, request):
         now = timezone.now()
@@ -85,7 +120,7 @@ class DashboardStatsView(APIView):
         recent_sales = [{
             "id": v.IdVenta,
             "time": v.Fecha.strftime("%I:%M %p"),
-            "items": v.detalleventa_set.count(),
+            "items": v.detalles.count(),
             "total": float(v.Total)
         } for v in recent_sales_qs]
 
@@ -102,7 +137,7 @@ class DashboardStatsView(APIView):
         chart_data = [{"date": s['date'].strftime('%a'), "total": float(s['total'])} for s in sales_by_date]
         if not chart_data: chart_data = [{"date": "Hoy", "total": 0}]
 
-        return Response({
+        response_data = {
             "totalProducts": total_products,
             "weeklySales": float(weekly_sales),
             "totalProveedores": total_proveedores,
@@ -110,7 +145,14 @@ class DashboardStatsView(APIView):
             "recentSales": recent_sales,
             "weeklyLosses": float(weekly_losses),
             "chartData": chart_data
-        })
+        }
+
+        # Filtro de privacidad: los vendedores no ven datos financieros sensibles
+        if getattr(request.user, 'Rol', None) == 'vendedor':
+            response_data['weeklySales'] = None
+            response_data['weeklyLosses'] = None
+
+        return Response(response_data)
 
 # --- REPORTES AVANZADOS ---
 class ReporteGerencialView(APIView):

@@ -1,19 +1,24 @@
 from rest_framework import viewsets
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+import re
 from rest_framework.response import Response
 
 from .models import Usuario
 from .serializers import UsuarioSerializer
+from .permissions import IsAdminRole
 
 
 # ViewSet para usuarios
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
+    permission_classes = [IsAdminRole]
 
 
-# Cambiar email directo, sin verificación
+# Cambiar email directo — protegido: solo admins pueden modificar emails de usuarios
 @api_view(['PATCH'])
+@permission_classes([IsAdminRole])
 def cambiar_email_directo(request, user_id):
     try:
         user = Usuario.objects.get(IdUsuario=user_id)
@@ -23,7 +28,6 @@ def cambiar_email_directo(request, user_id):
             return Response({"error": "Debe proporcionar un nuevo correo"}, status=400)
 
         # Validación simple de formato
-        import re
         regex = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
         if not re.match(regex, nuevo_email):
             return Response({"error": "Correo no válido"}, status=400)
