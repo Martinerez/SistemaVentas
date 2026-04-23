@@ -47,10 +47,10 @@ export function Perdidas() {
   const fetchData = async () => {
     try {
       const [perdidasRes, invRes, prodRes, detRes] = await Promise.all([
-        api.get("http://localhost:8000/api/inventario/perdidas/"),
-        api.get("http://localhost:8000/api/inventario/inventarios/"),
-        api.get("http://localhost:8000/api/catalogo/productos/"),
-        api.get("http://localhost:8000/api/inventario/detalles-entrada/")
+        api.get("/inventario/perdidas/"),
+        api.get("/inventario/inventarios/"),
+        api.get("/catalogo/productos/"),
+        api.get("/inventario/detalles-entrada/")
       ]);
       const perdidas   = perdidasRes.data.results ?? perdidasRes.data;
       const inventario = invRes.data.results ?? invRes.data;
@@ -105,7 +105,7 @@ export function Perdidas() {
         ]
       };
       
-      await api.post("http://localhost:8000/api/inventario/procesar-perdida/", payload);
+      await api.post("/inventario/procesar-perdida/", payload);
 
       toast.success("Pérdida registrada exitosamente.");
       setIsAddOpen(false);

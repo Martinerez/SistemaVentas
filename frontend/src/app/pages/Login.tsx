@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
-import axios from "axios";
+import api from "../api/axiosInstance";
 import { useAuth } from "../contexts/AuthContext";
 import { KeyRound, Mail, Loader2, Store } from "lucide-react";
 
@@ -25,7 +25,7 @@ export function Login() {
     setIsLoading(true);
     try {
      const cleanEmail = email.toLowerCase().trim();
-      const response = await axios.post("http://localhost:8000/api/token/", {
+      const response = await api.post("/token/", {
         Email: cleanEmail,
         password: password
       });

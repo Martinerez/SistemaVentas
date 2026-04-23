@@ -19,4 +19,16 @@ export default defineConfig({
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
+
+  // MEJ-003: Proxy para que las rutas relativas /api/* apunten al backend Django
+  // Evita CORS en desarrollo y permite cambiar el host sin tocar el código
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 })

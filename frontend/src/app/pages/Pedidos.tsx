@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import api from "../api/axiosInstance";
 import { Card } from "../components/ui/card";
 import { Input } from "../components/ui/input";
@@ -80,6 +80,19 @@ export function Pedidos() {
   const [modalProveedor, setModalProveedor] = useState(false);
   const [modalPedido, setModalPedido] = useState(false);
   const [successMessage, setSuccessMessage] = useState(false);
+  // MEJ-010: previene fuga de memoria al desmontar el componente
+  const successTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (successMessage) {
+      successTimerRef.current = window.setTimeout(() => setSuccessMessage(false), 2500);
+    }
+    return () => {
+      if (successTimerRef.current !== null) {
+        clearTimeout(successTimerRef.current);
+      }
+    };
+  }, [successMessage]);
 
   const [nuevoProveedor, setNuevoProveedor] = useState({
     name: "",
@@ -134,24 +147,18 @@ export function Pedidos() {
   ========================= */
 
   const fetchEntradas = async () => {
-    const { data } = await api.get(
-      "http://localhost:8000/api/inventario/entradas/",
-    );
+    const { data } = await api.get("/inventario/entradas/");
     setEntradas(data.results ?? data);
   };
 
   const fetchInventario = async () => {
-    const { data } = await api.get(
-      "http://localhost:8000/api/inventario/inventarios/",
-    );
+    const { data } = await api.get("/inventario/inventarios/");
     setInventario(data.results ?? data);
   };
 
   const fetchProveedores = async () => {
     try {
-      const res = await api.get(
-        "http://localhost:8000/api/catalogo/proveedores/",
-      );
+      const res = await api.get("/catalogo/proveedores/");
 
       const data = res.data.results ?? res.data;
       setProveedores(Array.isArray(data) ? data : []);
@@ -162,9 +169,7 @@ export function Pedidos() {
   };
 
   const fetchProductos = async () => {
-    const { data } = await api.get(
-      "http://localhost:8000/api/catalogo/productos/",
-    );
+    const { data } = await api.get("/catalogo/productos/");
     setProductos(data.results ?? data);
   };
 
@@ -205,7 +210,7 @@ export function Pedidos() {
   const handleDeletePedidoClick = async (pedido: any) => {
     try {
       const res = await api.get(
-        `http://localhost:8000/api/inventario/detalles-entrada/?entradaInventarioId=${pedido.id}`,
+        `/inventario/detalles-entrada/?entradaInventarioId=${pedido.id}`,
       );
 
       const detalles = res.data.results ?? res.data;
@@ -234,7 +239,7 @@ export function Pedidos() {
 
     try {
       await api.delete(
-        `http://localhost:8000/api/inventario/entradas/${entradaId}/delete_completo/`,
+        `/inventario/entradas/${entradaId}/delete_completo/`,
       );
 
       fetchEntradas();
@@ -286,7 +291,7 @@ export function Pedidos() {
 
     try {
       await api.post(
-        "http://localhost:8000/api/catalogo/proveedores/",
+        "/catalogo/proveedores/",
         nuevoProveedor,
       );
 
@@ -296,8 +301,7 @@ export function Pedidos() {
       setModalProveedor(false);
       setModalPedido(false);
 
-      setSuccessMessage(true);
-      setTimeout(() => setSuccessMessage(false), 2500);
+      setSuccessMessage(true); // el useEffect se encarga del timer
 
       fetchProveedores();
     } catch (e) {
@@ -355,12 +359,12 @@ export function Pedidos() {
       if (isEditMode) {
         // 1. borrar todo
         await api.delete(
-          `http://localhost:8000/api/inventario/entradas/${entradaId}/delete_completo/`,
+          `/inventario/entradas/${entradaId}/delete_completo/`,
         );
 
         // 2. recrear entrada
         const { data } = await api.post(
-          "http://localhost:8000/api/inventario/entradas/",
+          "/inventario/entradas/",
           {
             proveedorId: Number(selectedProveedor),
             usuarioId: userId,
@@ -372,7 +376,7 @@ export function Pedidos() {
         entradaId = data.id;
       } else {
         const { data } = await api.post(
-          "http://localhost:8000/api/inventario/entradas/",
+          "/inventario/entradas/",
           {
             proveedorId: Number(selectedProveedor),
             usuarioId: userId,
@@ -387,7 +391,7 @@ export function Pedidos() {
       // detalles siempre igual
       await Promise.all(
         productosPedido.map((p) =>
-          api.post("http://localhost:8000/api/inventario/detalles-entrada/", {
+          api.post("/inventario/detalles-entrada/", {
             entradaInventarioId: entradaId,
             productoId: Number(p.productoId),
             cantidad: Number(p.cantidad),

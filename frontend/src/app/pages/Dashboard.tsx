@@ -13,6 +13,7 @@ import {
 import { Card } from "../components/ui/card";
 import { useState, useEffect } from "react";
 import api from "../api/axiosInstance";
+import { useAuth } from "../contexts/AuthContext";
 import {
   LineChart,
   Line,
@@ -26,6 +27,8 @@ import {
 export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [statsData, setStatsData] = useState<any>(null);
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'admin';
 
   useEffect(() => {
     fetchDashboardStats();
@@ -33,9 +36,7 @@ export function Dashboard() {
 
   const fetchDashboardStats = async () => {
     try {
-      const { data } = await api.get(
-        "http://localhost:8000/api/ventas/dashboard/stats/",
-      );
+      const { data } = await api.get("/ventas/dashboard/stats/");
       setStatsData(data);
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
@@ -57,11 +58,9 @@ export function Dashboard() {
 
   const {
     totalProducts,
-    weeklySales,
     totalProveedores,
     lowStockItems,
     recentSales,
-    weeklyLosses,
     chartData,
   } = statsData;
 
@@ -73,22 +72,26 @@ export function Dashboard() {
       change: "Items en Catálogo",
       trend: "up",
       color: "slate",
+      adminOnly: false,
     },
     {
       icon: DollarSign,
       label: "Ventas Semanales",
-      value: `C$ ${weeklySales.toFixed(2)}`,
+      // null-safety: si el backend retorna null para vendedor, mostramos guión
+      value: statsData?.weeklySales != null ? `C$ ${Number(statsData.weeklySales).toFixed(2)}` : '—',
       change: "Últimos 7 días",
       trend: "up",
       color: "green",
+      adminOnly: true,
     },
     {
       icon: TrendingDown,
       label: "Pérdidas del Mes",
-      value: `C$ ${weeklyLosses.toFixed(2)}`,
+      value: statsData?.weeklyLosses != null ? `C$ ${Number(statsData.weeklyLosses).toFixed(2)}` : '—',
       change: "Últimos 7 días",
       trend: "down",
       color: "red",
+      adminOnly: true,
     },
     {
       icon: Truck,
@@ -97,8 +100,12 @@ export function Dashboard() {
       change: "Alianzas",
       trend: "up",
       color: "blue",
+      adminOnly: false,
     },
   ];
+
+  // Los vendedores no ven las cards con datos financieros sensibles
+  const visibleStats = stats.filter(stat => isAdmin || !stat.adminOnly);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -113,7 +120,7 @@ export function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => {
+        {visibleStats.map((stat, index) => {
           const Icon = stat.icon;
           const colorClasses = {
             slate: "from-slate-600 to-slate-800",

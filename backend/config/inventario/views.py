@@ -1,21 +1,17 @@
-from urllib import request
-
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import action
 from django.db import transaction
 from django.utils import timezone
 from .models import EntradaInventario, DetalleEntradaInventario, Inventario, Perdida, DetallePerdida, SolicitudDevolucion, DetalleSolicitudDevolucion
 from usuarios.models import Usuario
-from usuarios.permissions import IsAdminRole
+from usuarios.permissions import IsAdminRole, IsAdminOrReadOnly
 from .serializers import (
     EntradaInventarioSerializer, DetalleEntradaInventarioSerializer, InventarioSerializer,
     PerdidaSerializer, DetallePerdidaSerializer, SolicitudDevolucionSerializer, DetalleSolicitudDevolucionSerializer
 )
-
-from django.utils import timezone
-from rest_framework.decorators import action
 
 
 class EntradaInventarioViewSet(viewsets.ModelViewSet):
@@ -47,7 +43,7 @@ class EntradaInventarioViewSet(viewsets.ModelViewSet):
 class DetalleEntradaInventarioViewSet(viewsets.ModelViewSet):
     queryset = DetalleEntradaInventario.objects.all()
     serializer_class = DetalleEntradaInventarioSerializer
-    permission_classes = [IsAuthenticated, IsAdminRole]
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
 
     # =========================
     # FILTRO POR ENTRADA
@@ -85,7 +81,7 @@ class DetalleEntradaInventarioViewSet(viewsets.ModelViewSet):
 class InventarioViewSet(viewsets.ModelViewSet):
     queryset = Inventario.objects.all()
     serializer_class = InventarioSerializer
-    permission_classes = [IsAuthenticated, IsAdminRole]
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     pagination_class = None
 
 class PerdidaViewSet(viewsets.ModelViewSet):
