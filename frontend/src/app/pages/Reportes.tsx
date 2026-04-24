@@ -119,6 +119,19 @@ export function Reportes() {
       sheet.addRow(['Producto Estrella', '', resultadoGerencial.producto_mas_vendido]);
     }
 
+    if ((seleccionVista === '2' || seleccionVista === 'todos') && datosPivot) {
+      sheet.addRow([]);
+      sheet.addRow(['--- VENTAS MENSUALES ---']).font = { bold: true };
+      sheet.addRow(['Producto:', datosPivot.producto, '']);
+      const headerMeses = sheet.addRow(['MES', 'VENTAS', '']);
+      headerMeses.eachCell(c => c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDEE2E6' } });
+      const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      const valores = [datosPivot.ene, datosPivot.feb, datosPivot.mar, datosPivot.abr, datosPivot.may, datosPivot.jun, datosPivot.jul, datosPivot.ago, datosPivot.sep, datosPivot.oct, datosPivot.nov, datosPivot.dic];
+      meses.forEach((m, i) => {
+        sheet.addRow([m, `C$ ${Number(valores[i] || 0).toLocaleString()}`, '']);
+      });
+    }
+
     if ((seleccionVista === '3' || seleccionVista === 'todos') && productosProveedor.length > 0) {
       sheet.addRow([]);
       sheet.addRow(['--- PRODUCTOS POR PROVEEDOR ---']).font = { bold: true };
