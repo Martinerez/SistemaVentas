@@ -57,27 +57,41 @@ class InventarioSerializer(serializers.ModelSerializer):
         model = Inventario
         fields = ['id', 'detalleEntradaId', 'estado', 'fechaMovimiento']
 
-
-class PerdidaSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(source='IdPerdida', read_only=True)
-    usuarioId = serializers.PrimaryKeyRelatedField(source='IdUsuario', queryset=Usuario.objects.all())
-    tipoPerdida = serializers.CharField(source='TipoPerdida')
-    fecha = serializers.DateTimeField(source='Fecha')
-    total = serializers.DecimalField(source='Total', max_digits=12, decimal_places=2)
-
-    class Meta:
-        model = Perdida
-        fields = ['id', 'usuarioId', 'tipoPerdida', 'fecha', 'total']
-
 class DetallePerdidaSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='IdDetallePerdida', read_only=True)
     perdidaId = serializers.PrimaryKeyRelatedField(source='IdPerdida', queryset=Perdida.objects.all())
     inventarioId = serializers.PrimaryKeyRelatedField(source='IdInventario', queryset=Inventario.objects.all())
     precioCompraUnitario = serializers.DecimalField(source='PrecioCompraUnitario', max_digits=12, decimal_places=2)
 
+    #  agregado (como en devoluciones)
+    productoNombre = serializers.CharField(
+        source="IdInventario.IdDetalleEntrada.IdProducto.Nombre",
+        read_only=True
+    )
+
     class Meta:
         model = DetallePerdida
-        fields = ['id', 'perdidaId', 'inventarioId', 'precioCompraUnitario']
+        fields = ['id', 'perdidaId', 'inventarioId', 'precioCompraUnitario', 'productoNombre']
+
+class PerdidaSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='IdPerdida', read_only=True)
+    usuarioId = serializers.PrimaryKeyRelatedField(source='IdUsuario', queryset=Usuario.objects.all())
+    usuarioNombre = serializers.CharField(source="IdUsuario.Nombre", read_only=True)
+    usuarioRol = serializers.CharField(source="IdUsuario.Rol", read_only=True)
+    tipoPerdida = serializers.CharField(source='TipoPerdida')
+    fecha = serializers.DateTimeField(source='Fecha')
+    total = serializers.DecimalField(source='Total', max_digits=12, decimal_places=2)
+
+    # ENTRADA
+    detalles = DetallePerdidaSerializer(
+        source='detalleperdida_set',  # nombre del related_name por defecto
+        many=True,
+        read_only=True
+    )
+
+    class Meta:
+        model = Perdida
+        fields = ['id', 'usuarioId', 'usuarioNombre', 'usuarioRol', 'tipoPerdida', 'fecha', 'total', 'detalles']
 
 class DetalleSolicitudDevolucionSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='IdDetalleSolicitudDevolucion', read_only=True)
