@@ -283,7 +283,7 @@ export function Devoluciones() {
           <div className="relative max-w-md w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
             <Input
-              placeholder="Buscar por ID o notas..."
+              placeholder="Buscar por ID..."
               className="pl-10 h-11"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -462,7 +462,7 @@ export function Devoluciones() {
               <div className="flex items-start">
                 <AlertCircle className="size-5 text-amber-500 mr-2 mt-0.5" />
                 <p className="text-xs text-amber-700">
-                  Los productos aquí listados están agrupados por entrada. La solicitud
+                  Los productos aquí listados son los que aún tienen stock en inventario. La solicitud
                   quedará como Pendiente para el proveedor y el stock se retendrá.
                 </p>
               </div>

@@ -19,10 +19,9 @@ export function Reportes() {
   const [datosPivot, setDatosPivot] = useState<any>(null);
   const [productosProveedor, setProductosProveedor] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [imprimiendo, setImprimiendo] = useState(false);
 
-  
-
-  // Este estado solo controlará qué clases CSS de impresión se aplican
+  // Estado para la elección del usuario --La pregunta de los 3 reportes
   const [seleccionVista, setSeleccionVista] = useState<'1' | '2' | '3' | 'todos'>('todos');
 
   useEffect(() => {
@@ -61,11 +60,17 @@ export function Reportes() {
     setLoading(true);
     try {
       const { data } = await api.get(`/ventas/reporte-pivot/?anio=${anio}&productoId=${productoSeleccionado}`);
-      setDatosPivot(data);
-      toast.success("Análisis mensual cargado");
+      const tieneVentas = [data.ene, data.feb, data.mar, data.abr, data.may, data.jun, data.jul, data.ago, data.sep, data.oct, data.nov, data.dic].some(v => Number(v) > 0);
+      if (!tieneVentas) {
+        setDatosPivot(null);
+        toast.error("Este producto no tiene ventas registradas");
+      } else {
+        setDatosPivot(data);
+        toast.success("Análisis mensual cargado");
+      }
     } catch (e) {
-      setDatosPivot({ producto: "Sin registros", ene:0, feb:0, mar:0, abr:0, may:0, jun:0, jul:0, ago:0, sep:0, oct:0, nov:0, dic:0 });
-      toast.info("No se encontraron ventas para este periodo");
+      setDatosPivot(null);
+      toast.error("No se encontraron ventas para este periodo");
     } finally { setLoading(false); }
   };
 
@@ -74,13 +79,20 @@ export function Reportes() {
     setLoading(true);
     try {
       const { data } = await api.get(`/ventas/productos-proveedor/?proveedorId=${proveedorSeleccionado}`);
-      setProductosProveedor(data);
-      if (data.length > 0) toast.success("Lista de productos cargada");
+      if (data.length === 0) {
+        setProductosProveedor([]);
+        toast.error("Este proveedor no tiene productos registrados actualmente");
+      } else {
+        setProductosProveedor(data);
+        toast.success("Lista de productos cargada");
+      }
     } catch (e) {
+      setProductosProveedor([]);
       toast.error("Error al obtener productos");
     } finally { setLoading(false); }
   };
 
+  //DOCUMENTO DE EXCEL CON EXCELJS
   const exportarExcelEstetico = async () => {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Reporte de Miscelánea');
@@ -91,6 +103,7 @@ export function Reportes() {
       { header: 'VALOR/STOCK', key: 'val', width: 20 },
     ];
 
+    // Título Principal
     sheet.mergeCells('A1:C1');
     const title = sheet.getCell('A1');
     title.value = 'MISCELÁNEA BENDICIÓN DE DIOS - REPORTE';
@@ -98,22 +111,12 @@ export function Reportes() {
     title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
     title.alignment = { horizontal: 'center' };
 
-    // Lógica de exportación basada en la selección del usuario
     if ((seleccionVista === '1' || seleccionVista === 'todos') && resultadoGerencial) {
       sheet.addRow([]);
       sheet.addRow(['--- REPORTE GERENCIAL ---']).font = { bold: true };
       sheet.addRow(['Monto Total Vendido', '', `C$ ${Number(resultadoGerencial.total_ventas).toLocaleString()}`]);
       sheet.addRow(['Promedio de Ventas', '', `C$ ${Number(resultadoGerencial.promedio_venta).toLocaleString()}`]);
       sheet.addRow(['Producto Estrella', '', resultadoGerencial.producto_mas_vendido]);
-    }
-
-    if ((seleccionVista === '2' || seleccionVista === 'todos') && datosPivot) {
-        sheet.addRow([]);
-        sheet.addRow(['--- VENTAS MENSUALES: ' + datosPivot.producto + ' ---']).font = { bold: true };
-        sheet.addRow(['Mes', 'Venta']);
-        ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'].forEach(mes => {
-            sheet.addRow([mes.toUpperCase(), `C$ ${Number(datosPivot[mes]).toLocaleString()}`]);
-        });
     }
 
     if ((seleccionVista === '3' || seleccionVista === 'todos') && productosProveedor.length > 0) {
@@ -127,178 +130,246 @@ export function Reportes() {
     }
 
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), `Reporte_Miscelanea_${new Date().getTime()}.xlsx`);
+    saveAs(new Blob([buffer]), `Reporte_Miscelanea_BendicionDeDios_${new Date().getTime()}.xlsx`);
   };
 
-  // Función para determinar si una sección debe ocultarse AL IMPRIMIR
-  const getPrintClass = (id: string) => {
-    if (seleccionVista === 'todos') return '';
-    return seleccionVista === id ? '' : 'hide-on-print';
+  const puedeImprimir = () => {
+    if (seleccionVista === 'todos') {
+      return !!resultadoGerencial || !!datosPivot || productosProveedor.length > 0;
+    }
+    if (seleccionVista === '1') return !!resultadoGerencial;
+    if (seleccionVista === '2') return !!datosPivot;
+    if (seleccionVista === '3') return productosProveedor.length > 0;
+    return false;
+  };
+
+  const handleImprimirPDF = () => {
+    if (!puedeImprimir()) {
+      toast.error("Debe generar el reporte antes, para generar el PDF.");
+      return;
+    }
+    setImprimiendo(true);
+    setTimeout(() => {
+      window.print();
+      setImprimiendo(false);
+    }, 200);
   };
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto p-4">
-      <div className="border-b pb-4 text-center">
-        <h1 className="text-3xl font-black text-slate-800 uppercase leading-none">Reportes de la miscelánea</h1>
-        <p className="text-slate-500 font-medium italic">"Bendición de Dios"</p>
-      </div>
+      {/* TÍTULO PRINCIPAL (PANTALLA) */}
+      {!imprimiendo && (
+        <div className="border-b pb-6 text-center">
+          <h1 className="text-4xl font-black text-slate-800 uppercase tracking-tighter">Reportes de la Miscelánea</h1>
+          <p className="text-xl text-slate-600 font-medium italic mt-1">"Bendición de Dios"</p>
+        </div>
+      )}
 
-      <Card className="p-4 bg-slate-800 text-white shadow-xl no-print border-none">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="text-green-500" size={24}/>
-            <p className="font-bold text-sm uppercase tracking-wider">¿Qué desea incluir en el documento?</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <select 
-              value={seleccionVista} 
-              onChange={(e: any) => setSeleccionVista(e.target.value)}
-              className="bg-slate-700 text-white text-xs font-bold p-2 rounded-lg outline-none border border-slate-600 cursor-pointer"
-            >
-              <option value="todos">Incluir los todos los reportes</option>
-              <option value="1">Solo Reporte Gerencial</option>
-              <option value="2">Solo Ventas Mensuales del Producto X</option>
-              <option value="3">Solo Lista de productos del Proveedor X</option>
-            </select>
-            <Button onClick={() => window.print()} className="bg-white text-slate-900 hover:bg-slate-200 font-black text-xs">
-              <Printer size={16} className="mr-2" /> PDF
-            </Button>
-            <Button onClick={exportarExcelEstetico} className="bg-green-600 hover:bg-green-700 text-white font-black text-xs">
-              <FileSpreadsheet size={16} className="mr-2" /> DOCUMENTO EXCEL
-            </Button>
+      {/* HEADER DE IMPRESIÓN */}
+      {imprimiendo && (
+        <div className="flex flex-col mb-10 border-b-4 border-slate-900 pb-6 print:break-after-avoid">
+          <div className="flex justify-between items-end">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">MISCELÁNEA BENDICIÓN DE DIOS</h1>
+              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest"></p>
+            </div>
+            <div className="text-right flex flex-col items-end gap-2">
+              <span className="text-xs font-black text-slate-800 uppercase tracking-widest bg-slate-100 px-4 py-1.5 rounded-md border border-slate-300">
+                Documento Oficial
+              </span>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                Emisión: {new Date().toLocaleDateString('es-NI', { year: 'numeric', month: 'long', day: 'numeric' })}
+              </span>
+            </div>
           </div>
         </div>
-      </Card>
+      )}
 
-      <div className="grid lg:grid-cols-3 gap-6 no-print">
-        <Card className="p-6 space-y-4 border-t-4 border-green-600 shadow-lg bg-white">
-          <div className="flex items-center gap-2 font-bold text-green-700"><TrendingUp size={24} /> <h3>Reporte Gerencial</h3></div>
-          <div className="grid grid-cols-2 gap-2">
-            <input type="date" className="p-2 border rounded text-sm w-full outline-none focus:border-green-500" value={fechaInicio} onChange={(e)=>setFechaInicio(e.target.value)} />
-            <input type="date" className="p-2 border rounded text-sm w-full outline-none focus:border-green-500" value={fechaFin} onChange={(e)=>setFechaFin(e.target.value)} />
+      {/* PANEL DE SELECCIÓN (LA PREGUNTA) */}
+      {!imprimiendo && (
+        <Card className="p-4 bg-slate-800 text-white shadow-xl border-none">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="text-green-500" size={24} />
+              <p className="font-bold text-sm uppercase tracking-wider">¿Qué desea incluir en el documento?</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <select
+                value={seleccionVista}
+                onChange={(e: any) => setSeleccionVista(e.target.value)}
+                className="bg-slate-700 text-white text-xs font-bold p-2 rounded-lg outline-none border border-slate-600 cursor-pointer"
+              >
+                <option value="todos">Incluir todos los reportes</option>
+                <option value="1">Solo Reporte Gerencial</option>
+                <option value="2">Solo Ventas Mensuales</option>
+                <option value="3">Solo Lista de Proveedor</option>
+              </select>
+              <Button onClick={handleImprimirPDF} className="bg-white text-slate-900 hover:bg-slate-200 font-black text-xs">
+                <Printer size={16} className="mr-2" /> PDF
+              </Button>
+              <Button onClick={exportarExcelEstetico} className="bg-green-600 hover:bg-green-700 text-white font-black text-xs">
+                <FileSpreadsheet size={16} className="mr-2" /> DOCUMENTO EXCEL
+              </Button>
+            </div>
           </div>
-          <Button onClick={ejecutarReporteGerencial} className="w-full bg-green-700 hover:bg-green-800 text-white font-bold uppercase tracking-widest">{loading ? <Loader2 className="animate-spin" /> : "Generar"}</Button>
         </Card>
+      )}
 
-        <Card className="p-6 space-y-4 border-t-4 border-blue-600 shadow-lg bg-white">
-          <div className="flex items-center gap-2 font-bold text-blue-700"><CalendarDays size={24} /> <h3>Ventas Mensuales</h3></div>
-          <select className="w-full p-2 border rounded text-sm outline-none focus:border-blue-500" value={productoSeleccionado} onChange={(e)=>setProductoSeleccionado(e.target.value)}>
-            <option value="">-- Seleccionar Producto --</option>
-            {productosLista.map(p => <option key={p.id} value={p.id}>{p.Nombre || p.name}</option>)}
-          </select>
-          <Button onClick={ejecutarReportePivot} className="w-full bg-blue-700 text-white font-bold uppercase tracking-widest">Analizar</Button>
-        </Card>
+      {/* SECCIÓN DE FILTROS */}
+      {!imprimiendo && (
+        <div className="grid lg:grid-cols-3 gap-6">
+          <Card className="p-6 space-y-4 border-t-4 border-green-600 shadow-lg bg-white">
+            <div className="flex items-center gap-2 font-bold text-green-700"><TrendingUp size={24} /> <h3>Reporte Gerencial</h3></div>
+            <div className="grid grid-cols-2 gap-2">
+              <input type="date" className="p-2 border rounded text-sm w-full outline-none focus:border-green-500" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
+              <input type="date" className="p-2 border rounded text-sm w-full outline-none focus:border-green-500" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
+            </div>
+            <Button onClick={ejecutarReporteGerencial} className="w-full bg-green-700 hover:bg-green-800 text-white font-bold uppercase tracking-widest">{loading ? <Loader2 className="animate-spin" /> : "Generar"}</Button>
+          </Card>
 
-        <Card className="p-6 space-y-4 border-t-4 border-purple-600 shadow-lg bg-white">
-          <div className="flex items-center gap-2 font-bold text-purple-700"><Users size={24} /> <h3>Productos del Proveedor</h3></div>
-          <select className="w-full p-2 border rounded text-sm outline-none focus:border-purple-500" value={proveedorSeleccionado} onChange={(e)=>setProveedorSeleccionado(e.target.value)}>
-            <option value="">-- Seleccionar Proveedor --</option>
-            {proveedoresLista.map(prov => <option key={prov.id} value={prov.id}>{prov.Nombre || prov.name}</option>)}
-          </select>
-          <Button onClick={ejecutarReporteProveedor} className="w-full bg-purple-700 text-white font-bold uppercase tracking-widest">Listar</Button>
-        </Card>
-      </div>
+          <Card className="p-6 space-y-4 border-t-4 border-blue-600 shadow-lg bg-white">
+            <div className="flex items-center gap-2 font-bold text-blue-700"><CalendarDays size={24} /> <h3>Ventas Mensuales</h3></div>
+            <select className="w-full p-2 border rounded text-sm outline-none focus:border-blue-500" value={productoSeleccionado} onChange={(e) => setProductoSeleccionado(e.target.value)}>
+              <option value="">-- Seleccionar Producto --</option>
+              {productosLista.map(p => <option key={p.id} value={p.id}>{p.Nombre || p.name}</option>)}
+            </select>
+            <Button onClick={ejecutarReportePivot} className="w-full bg-blue-700 text-white font-bold uppercase tracking-widest">Analizar</Button>
+          </Card>
 
-      <div className="flex flex-col gap-12 mt-12 pb-32">
-        {/* Usamos clases dinámicas para que el sistema SIEMPRE muestre la info si existe, pero el PDF oculte lo que no se seleccionó */}
-        
-        {resultadoGerencial && (
-          <div className={getPrintClass('1')}>
-            <Card className="p-6 border-l-8 border-green-500 shadow-xl bg-white">
-                <h4 className="font-black text-green-700 uppercase mb-4 flex items-center gap-2 border-b pb-2"><TrendingUp size={22} /> Resumen de Desempeño</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 shadow-sm">
-                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">Monto Total Vendido</span>
-                    <p className="text-2xl font-black text-slate-800">C$ {Number(resultadoGerencial.total_ventas || 0).toLocaleString()}</p>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 shadow-sm">
-                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">Promedio de ventas</span>
-                    <p className="text-2xl font-black text-slate-800">C$ {Number(resultadoGerencial.promedio_venta || 0).toLocaleString()}</p>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 shadow-sm">
-                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">Producto Estrella</span>
-                    <p className="text-2xl font-black text-green-600 uppercase truncate">{resultadoGerencial.producto_mas_vendido || 'N/A'}</p>
-                </div>
-                </div>
-            </Card>
-          </div>
+          <Card className="p-6 space-y-4 border-t-4 border-purple-600 shadow-lg bg-white">
+            <div className="flex items-center gap-2 font-bold text-purple-700"><Users size={24} /> <h3>Productos del Proveedor</h3></div>
+            <select className="w-full p-2 border rounded text-sm outline-none focus:border-purple-500" value={proveedorSeleccionado} onChange={(e) => setProveedorSeleccionado(e.target.value)}>
+              <option value="">-- Seleccionar Proveedor --</option>
+              {proveedoresLista.map(prov => <option key={prov.id} value={prov.id}>{prov.Nombre || prov.name}</option>)}
+            </select>
+            <Button onClick={ejecutarReporteProveedor} className="w-full bg-purple-700 text-white font-bold uppercase tracking-widest">Listar</Button>
+          </Card>
+        </div>
+      )}
+
+      {/* ÁREA DE RESULTADOS DINÁMICOS */}
+      <div className={`mt-12 ${imprimiendo ? 'block space-y-8 pb-0' : 'flex flex-col gap-12 pb-32'}`}>
+        {resultadoGerencial && (!imprimiendo || seleccionVista === '1' || seleccionVista === 'todos') && (
+          <Card className={`p-6 border-l-8 border-green-500 bg-white ${imprimiendo ? 'border shadow-none block' : 'shadow-xl'} print:break-inside-avoid`}>
+            <div className="flex flex-col md:flex-row md:items-end justify-between border-b pb-2 mb-4">
+              <h4 className="font-black text-green-700 uppercase flex items-center gap-2 print:text-green-800"><TrendingUp size={22} /> Resumen de Desempeño</h4>
+              <span className="text-xs font-bold text-slate-500 print:text-slate-600 uppercase tracking-widest mt-2 md:mt-0">
+                Período: {fechaInicio.split('-').reverse().join('/')} al {fechaFin.split('-').reverse().join('/')}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 shadow-sm print:bg-white print:border-slate-200 print:shadow-none">
+                <span className="text-[10px] text-slate-400 font-black uppercase tracking-tighter print:text-slate-500">Monto Total Vendido</span>
+                <p className="text-2xl font-black text-slate-800">C$ {Number(resultadoGerencial.total_ventas || 0).toLocaleString()}</p>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 shadow-sm print:bg-white print:border-slate-200 print:shadow-none">
+                <span className="text-[10px] text-slate-400 font-black uppercase tracking-tighter print:text-slate-500">Promedio de ventas</span>
+                <p className="text-2xl font-black text-slate-800">C$ {Number(resultadoGerencial.promedio_venta || 0).toLocaleString()}</p>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 shadow-sm print:bg-white print:border-slate-200 print:shadow-none">
+                <span className="text-[10px] text-slate-400 font-black uppercase tracking-tighter print:text-slate-500">Producto Estrella</span>
+                <p className="text-2xl font-black text-green-600 uppercase truncate print:text-green-700">{resultadoGerencial.producto_mas_vendido || 'N/A'}</p>
+              </div>
+            </div>
+          </Card>
         )}
 
-        {datosPivot && (
-          <div className={getPrintClass('2')}>
-            <Card className="p-8 shadow-2xl border-0 bg-white relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-blue-600"></div>
-                <h4 className="font-black mb-6 flex items-center gap-2 text-blue-700 text-lg uppercase tracking-widest">
-                <Package size={24}/> Análisis de Ventas: {datosPivot.producto}
-                </h4>
-                <div className="overflow-x-auto rounded-2xl border border-slate-100 shadow-inner">
-                <table className="w-full text-center">
-                    <thead className="bg-slate-50 uppercase font-black text-[11px] text-slate-500 border-b">
-                    <tr>{['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map(m=><th key={m} className="p-5 border-r last:border-r-0">{m}</th>)}</tr>
-                    </thead>
-                    <tbody className="text-sm">
-                    <tr>
-                        {[datosPivot.ene, datosPivot.feb, datosPivot.mar, datosPivot.abr, datosPivot.may, datosPivot.jun, datosPivot.jul, datosPivot.ago, datosPivot.sep, datosPivot.oct, datosPivot.nov, datosPivot.dic].map((v, i)=>(
-                        <td key={i} className="p-6 font-black text-blue-600 border-r last:border-r-0">C${Number(v || 0).toLocaleString()}</td>
-                        ))}
-                    </tr>
-                    </tbody>
-                </table>
-                </div>
-            </Card>
-          </div>
-        )}
-
-        {productosProveedor.length > 0 && (
-          <div className={getPrintClass('3')}>
-            <Card className="p-8 shadow-2xl border-0 bg-white relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-purple-600"></div>
-                <h4 className="font-black text-xl flex items-center gap-2 text-slate-800 uppercase tracking-tighter mb-8">
-                <Users className="text-purple-600" size={28} /> Productos abastecidos por el proveedor {proveedoresLista.find(p => p.id.toString() === proveedorSeleccionado)?.Nombre || 'N/A'}
-                </h4>
-                <div className="overflow-hidden border border-slate-100 rounded-3xl shadow-sm">
-                <table className="w-full text-left">
-                    <thead className="bg-slate-50 border-b text-[12px] font-black text-slate-400 uppercase tracking-widest">
-                    <tr><th className="p-6">Cód.</th><th className="p-6">Descripción del producto</th><th className="p-6 text-center">Existencia Real</th></tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                    {productosProveedor.map((p) => (
-                        <tr key={p.id}>
-                        <td className="p-6 font-mono text-slate-400 text-xs">#{p.id}</td>
-                        <td className="p-6 font-black text-slate-700 uppercase">{p.producto}</td>
-                        <td className="p-6 text-center">
-                            <span className={`inline-block w-36 py-2.5 rounded-xl font-black text-xs shadow-sm border ${p.unidades_disponibles < 10 ? 'bg-red-50 text-red-600 border-red-100' : 'bg-green-50 text-green-600 border-green-100'}`}>
-                            {p.unidades_disponibles} UNIDADES
-                            </span>
-                        </td>
-                        </tr>
+        {datosPivot && (!imprimiendo || seleccionVista === '2' || seleccionVista === 'todos') && (
+          <Card className={`p-8 border-0 bg-white relative ${imprimiendo ? 'border border-slate-200 shadow-none p-6 block overflow-visible' : 'shadow-2xl overflow-hidden'} print:break-inside-avoid`}>
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-blue-600 print:h-2"></div>
+            <h4 className="font-black mb-6 flex items-center gap-2 text-blue-700 text-lg uppercase tracking-widest print:text-blue-800">
+              <Package size={24} /> Análisis de Ventas: {datosPivot.producto}
+            </h4>
+            <div className="overflow-x-auto rounded-2xl border border-slate-100 shadow-inner print:shadow-none print:border-slate-300 print:overflow-visible">
+              <table className="w-full text-center">
+                <thead className="bg-slate-50 uppercase font-black text-[11px] text-slate-500 border-b print:bg-slate-100 print:text-slate-700">
+                  <tr>{['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map(m => <th key={m} className="p-5 border-r last:border-r-0 print:p-3 print:border-slate-300">{m}</th>)}</tr>
+                </thead>
+                <tbody className="text-sm">
+                  <tr>
+                    {[datosPivot.ene, datosPivot.feb, datosPivot.mar, datosPivot.abr, datosPivot.may, datosPivot.jun, datosPivot.jul, datosPivot.ago, datosPivot.sep, datosPivot.oct, datosPivot.nov, datosPivot.dic].map((v, i) => (
+                      <td key={i} className="p-6 font-black text-blue-600 border-r last:border-r-0 print:p-3 print:text-blue-800 print:border-slate-300">C${Number(v || 0).toLocaleString()}</td>
                     ))}
-                    </tbody>
-                </table>
-                </div>
-            </Card>
-          </div>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
+
+        {productosProveedor.length > 0 && (!imprimiendo || seleccionVista === '3' || seleccionVista === 'todos') && (
+          <Card className={`p-8 border-0 bg-white relative ${imprimiendo ? 'border border-slate-200 shadow-none p-6 block overflow-visible' : 'shadow-2xl overflow-hidden'}`}>
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-purple-600 print:h-2"></div>
+            <h4 className="font-black text-xl flex items-center gap-2 text-slate-800 uppercase tracking-tighter mb-8 print:mb-6">
+              <Users className="text-purple-600 print:text-purple-800" size={28} /> Productos abastecidos por el proveedor
+            </h4>
+            <div className="overflow-hidden border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
+              <table className="w-full text-left print:border-collapse">
+                <thead className="bg-slate-50 border-b text-[12px] font-black text-slate-400 uppercase tracking-widest print:bg-slate-100 print:text-slate-700 print:border-slate-300">
+                  <tr><th className="p-6 print:p-3">Cód.</th><th className="p-6 print:p-3">Descripción del Artículo</th><th className="p-6 print:p-3 text-center">Existencia Real</th></tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 print:divide-slate-200">
+                  {productosProveedor.map((p) => (
+                    <tr key={p.id}>
+                      <td className="p-6 print:p-3 font-mono text-slate-400 print:text-slate-600 text-xs">#{p.id}</td>
+                      <td className="p-6 print:p-3 font-black text-slate-700 uppercase">{p.producto}</td>
+                      <td className="p-6 print:p-3 text-center">
+                        <span className={`inline-block w-36 py-2.5 rounded-xl font-black text-xs shadow-sm border print:shadow-none ${p.unidades_disponibles < 10 ? 'bg-red-50 text-red-600 border-red-100 print:bg-red-100 print:text-red-800' : 'bg-green-50 text-green-600 border-green-100 print:bg-green-100 print:text-green-800'}`}>
+                          {p.unidades_disponibles} UNIDADES
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         )}
       </div>
 
       <style>{`
         @media print {
+          @page { size: letter; margin: 1.5cm; }
           .no-print { display: none !important; }
-          .hide-on-print { display: none !important; }
           body { 
-            background: white !important; 
+            background: #ffffff !important; 
             padding: 0 !important; 
-            -webkit-print-color-adjust: exact;
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important; 
+            color: #0f172a !important;
           }
-          .Card { 
-            box-shadow: none !important; 
-            border: 1px solid #e2e8f0 !important; 
-            margin-bottom: 2rem !important; 
-            page-break-inside: avoid; 
+          
+          /* Mejoras visuales para impresión */
+          h1, h2, h3, h4, th, p, span, td {
+            color: #0f172a !important;
           }
-          @page {
-            margin: 1cm;
+          th {
+            background-color: #f1f5f9 !important; /* bg-slate-100 */
+            border-bottom: 2px solid #cbd5e1 !important; /* border-slate-300 */
           }
+          td {
+            border-bottom: 1px solid #e2e8f0 !important; /* border-slate-200 */
+          }
+          .print\\:bg-slate-100 { background-color: #f1f5f9 !important; }
+          .print\\:bg-white { background-color: #ffffff !important; }
+          .print\\:border-slate-300 { border-color: #cbd5e1 !important; }
+          .print\\:text-slate-500 { color: #64748b !important; }
+          .print\\:text-slate-700 { color: #334155 !important; }
+          .print\\:text-slate-800 { color: #1e293b !important; }
+          .print\\:text-slate-900 { color: #0f172a !important; }
+          
+          /* Evitar cortes indeseados */
+          thead { display: table-header-group; }
+          tfoot { display: table-footer-group; }
+          tr { page-break-inside: avoid; }
+          .print\\:break-inside-avoid { page-break-inside: avoid; }
+          .print\\:break-after-avoid { page-break-after: avoid; }
+          
+          #sonner-toaster, [data-sonner-toaster] { display: none !important; }
+          
+          /* Estilo para los badges en impresión */
+          .print\\:bg-red-100 { background-color: #fee2e2 !important; color: #991b1b !important; border-color: #fca5a5 !important; }
+          .print\\:bg-green-100 { background-color: #dcfce3 !important; color: #166534 !important; border-color: #86efac !important; }
         }
       `}</style>
     </div>
