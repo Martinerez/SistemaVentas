@@ -252,7 +252,7 @@ export function Perdidas() {
           </Table>
         </div>
       </Card>
-      /* Modal view detalle perdida */
+      {/* Modal view detalle perdida */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
