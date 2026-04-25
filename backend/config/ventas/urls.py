@@ -8,7 +8,8 @@ from .views import (
     AnularVentaView,
     ReporteGerencialView,
     ReportePivotVentasView,
-    ProductosPorProveedorView
+    ProductosPorProveedorView,
+    ReporteDevolucionesView
 )
 
 router = DefaultRouter()
@@ -23,4 +24,5 @@ urlpatterns = [
     path('reporte-gerencial/', ReporteGerencialView.as_view(), name='reporte-gerencial'),
     path('reporte-pivot/', ReportePivotVentasView.as_view(), name='reporte-pivot'),
     path('productos-proveedor/', ProductosPorProveedorView.as_view(), name='reporte-productos-proveedor'),
+    path('reporte-devoluciones/', ReporteDevolucionesView.as_view(), name='reporte-devoluciones'),
 ]

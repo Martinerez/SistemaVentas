@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { TrendingUp, CalendarDays, Users, Package, Loader2, FileSpreadsheet, Printer, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, CalendarDays, Users, Package, Loader2, FileSpreadsheet, Printer, CheckCircle2, Undo2 } from 'lucide-react';
 import api from '../api/axiosInstance';
 import { toast } from 'sonner';
 import ExcelJS from 'exceljs';
@@ -18,11 +18,17 @@ export function Reportes() {
   const [resultadoGerencial, setResultadoGerencial] = useState<any>(null);
   const [datosPivot, setDatosPivot] = useState<any>(null);
   const [productosProveedor, setProductosProveedor] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [resultadoDevoluciones, setResultadoDevoluciones] = useState<any[]>([]);
+  const [fechaInicioDev, setFechaInicioDev] = useState('');
+  const [fechaFinDev, setFechaFinDev] = useState('');
+  const [loadingGerencial, setLoadingGerencial] = useState(false);
+  const [loadingPivot, setLoadingPivot] = useState(false);
+  const [loadingProveedor, setLoadingProveedor] = useState(false);
+  const [loadingDevoluciones, setLoadingDevoluciones] = useState(false);
   const [imprimiendo, setImprimiendo] = useState(false);
 
   // Estado para la elección del usuario --La pregunta de los 3 reportes
-  const [seleccionVista, setSeleccionVista] = useState<'1' | '2' | '3' | 'todos'>('todos');
+  const [seleccionVista, setSeleccionVista] = useState<'1' | '2' | '3' | '4' | 'todos'>('todos');
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -45,19 +51,19 @@ export function Reportes() {
     if (new Date(fechaInicio) > new Date(fechaFin)) {
       return toast.error("La fecha de inicio no puede ser mayor a la fecha final");
     }
-    setLoading(true);
+    setLoadingGerencial(true);
     try {
       const { data } = await api.get(`/ventas/reporte-gerencial/?inicio=${fechaInicio}&fin=${fechaFin}`);
       setResultadoGerencial(data);
       toast.success("Reporte generado con éxito");
     } catch (e) {
       toast.error("Error al conectar con el servidor");
-    } finally { setLoading(false); }
+    } finally { setLoadingGerencial(false); }
   };
 
   const ejecutarReportePivot = async () => {
     if (!productoSeleccionado) return toast.error("Elige un producto");
-    setLoading(true);
+    setLoadingPivot(true);
     try {
       const { data } = await api.get(`/ventas/reporte-pivot/?anio=${anio}&productoId=${productoSeleccionado}`);
       const tieneVentas = [data.ene, data.feb, data.mar, data.abr, data.may, data.jun, data.jul, data.ago, data.sep, data.oct, data.nov, data.dic].some(v => Number(v) > 0);
@@ -71,12 +77,12 @@ export function Reportes() {
     } catch (e) {
       setDatosPivot(null);
       toast.error("No se encontraron ventas para este periodo");
-    } finally { setLoading(false); }
+    } finally { setLoadingPivot(false); }
   };
 
   const ejecutarReporteProveedor = async () => {
     if (!proveedorSeleccionado) return toast.error("Elige un proveedor");
-    setLoading(true);
+    setLoadingProveedor(true);
     try {
       const { data } = await api.get(`/ventas/productos-proveedor/?proveedorId=${proveedorSeleccionado}`);
       if (data.length === 0) {
@@ -89,7 +95,28 @@ export function Reportes() {
     } catch (e) {
       setProductosProveedor([]);
       toast.error("Error al obtener productos");
-    } finally { setLoading(false); }
+    } finally { setLoadingProveedor(false); }
+  };
+
+  const ejecutarReporteDevoluciones = async () => {
+    if (!fechaInicioDev || !fechaFinDev) return toast.error("Selecciona ambas fechas");
+    if (new Date(fechaInicioDev) > new Date(fechaFinDev)) {
+      return toast.error("La fecha de inicio no puede ser mayor a la fecha final");
+    }
+    setLoadingDevoluciones(true);
+    try {
+      const { data } = await api.get(`/ventas/reporte-devoluciones/?inicio=${fechaInicioDev}&fin=${fechaFinDev}`);
+      if (data.length === 0) {
+        setResultadoDevoluciones([]);
+        toast.error("No se encontraron devoluciones en este periodo");
+      } else {
+        setResultadoDevoluciones(data);
+        toast.success("Reporte de devoluciones cargado");
+      }
+    } catch (e) {
+      setResultadoDevoluciones([]);
+      toast.error("Error al conectar con el servidor");
+    } finally { setLoadingDevoluciones(false); }
   };
 
   //DOCUMENTO DE EXCEL CON EXCELJS
@@ -113,7 +140,7 @@ export function Reportes() {
 
     if ((seleccionVista === '1' || seleccionVista === 'todos') && resultadoGerencial) {
       sheet.addRow([]);
-      sheet.addRow(['--- REPORTE GERENCIAL ---']).font = { bold: true };
+      sheet.addRow(['--- REPORTE DE VENTAS ---']).font = { bold: true };
       sheet.addRow(['Monto Total Vendido', '', `C$ ${Number(resultadoGerencial.total_ventas).toLocaleString()}`]);
       sheet.addRow(['Promedio de Ventas', '', `C$ ${Number(resultadoGerencial.promedio_venta).toLocaleString()}`]);
       sheet.addRow(['Producto Estrella', '', resultadoGerencial.producto_mas_vendido]);
@@ -142,17 +169,37 @@ export function Reportes() {
       });
     }
 
+    if ((seleccionVista === '4' || seleccionVista === 'todos') && resultadoDevoluciones.length > 0) {
+      sheet.addRow([]);
+      sheet.addRow(['--- REPORTE DE DEVOLUCIONES ---']).font = { bold: true };
+      const headerDev = sheet.addRow(['ID SOLICITUD', 'PRODUCTO', 'CANTIDAD', 'MOTIVO', 'FECHA', 'ESTADO']);
+      headerDev.eachCell(c => c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDEE2E6' } });
+      resultadoDevoluciones.forEach(d => {
+        const d_fecha = new Date(d.fecha);
+        // add timezone offset back if needed, assuming the server returns YYYY-MM-DD
+        sheet.addRow([
+          d.id_solicitud,
+          d.producto,
+          d.cantidad,
+          d.motivo || 'N/A',
+          d_fecha.toLocaleDateString('es-NI', { timeZone: 'UTC' }),
+          d.estado
+        ]);
+      });
+    }
+
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer]), `Reporte_Miscelanea_BendicionDeDios_${new Date().getTime()}.xlsx`);
   };
 
   const puedeImprimir = () => {
     if (seleccionVista === 'todos') {
-      return !!resultadoGerencial || !!datosPivot || productosProveedor.length > 0;
+      return !!resultadoGerencial || !!datosPivot || productosProveedor.length > 0 || resultadoDevoluciones.length > 0;
     }
     if (seleccionVista === '1') return !!resultadoGerencial;
     if (seleccionVista === '2') return !!datosPivot;
     if (seleccionVista === '3') return productosProveedor.length > 0;
+    if (seleccionVista === '4') return resultadoDevoluciones.length > 0;
     return false;
   };
 
@@ -213,9 +260,10 @@ export function Reportes() {
                 className="bg-slate-700 text-white text-xs font-bold p-2 rounded-lg outline-none border border-slate-600 cursor-pointer"
               >
                 <option value="todos">Incluir todos los reportes</option>
-                <option value="1">Solo Reporte Gerencial</option>
+                <option value="1">Solo Reporte De Ventas</option>
                 <option value="2">Solo Ventas Mensuales</option>
                 <option value="3">Solo Lista de Proveedor</option>
+                <option value="4">Solo Devoluciones</option>
               </select>
               <Button onClick={handleImprimirPDF} className="bg-white text-slate-900 hover:bg-slate-200 font-black text-xs">
                 <Printer size={16} className="mr-2" /> PDF
@@ -230,32 +278,41 @@ export function Reportes() {
 
       {/* SECCIÓN DE FILTROS */}
       {!imprimiendo && (
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-4 md:grid-cols-2 gap-6">
           <Card className="p-6 space-y-4 border-t-4 border-green-600 shadow-lg bg-white">
-            <div className="flex items-center gap-2 font-bold text-green-700"><TrendingUp size={24} /> <h3>Reporte Gerencial</h3></div>
+            <div className="flex items-center gap-2 font-bold text-green-700"><TrendingUp size={24} /> <h3 className="truncate">Reporte de Ventas</h3></div>
             <div className="grid grid-cols-2 gap-2">
               <input type="date" className="p-2 border rounded text-sm w-full outline-none focus:border-green-500" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
               <input type="date" className="p-2 border rounded text-sm w-full outline-none focus:border-green-500" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
             </div>
-            <Button onClick={ejecutarReporteGerencial} className="w-full bg-green-700 hover:bg-green-800 text-white font-bold uppercase tracking-widest">{loading ? <Loader2 className="animate-spin" /> : "Generar"}</Button>
+            <Button onClick={ejecutarReporteGerencial} className="w-full bg-green-700 hover:bg-green-800 text-white font-bold uppercase tracking-widest">{loadingGerencial ? <Loader2 className="animate-spin" /> : "Generar"}</Button>
           </Card>
 
           <Card className="p-6 space-y-4 border-t-4 border-blue-600 shadow-lg bg-white">
-            <div className="flex items-center gap-2 font-bold text-blue-700"><CalendarDays size={24} /> <h3>Ventas Mensuales</h3></div>
+            <div className="flex items-center gap-2 font-bold text-blue-700"><CalendarDays size={24} /> <h3 className="truncate">Ventas Mensuales</h3></div>
             <select className="w-full p-2 border rounded text-sm outline-none focus:border-blue-500" value={productoSeleccionado} onChange={(e) => setProductoSeleccionado(e.target.value)}>
               <option value="">-- Seleccionar Producto --</option>
               {productosLista.map(p => <option key={p.id} value={p.id}>{p.Nombre || p.name}</option>)}
             </select>
-            <Button onClick={ejecutarReportePivot} className="w-full bg-blue-700 text-white font-bold uppercase tracking-widest">Analizar</Button>
+            <Button onClick={ejecutarReportePivot} className="w-full bg-blue-700 text-white font-bold uppercase tracking-widest">{loadingPivot ? <Loader2 className="animate-spin" /> : "Analizar"}</Button>
           </Card>
 
           <Card className="p-6 space-y-4 border-t-4 border-purple-600 shadow-lg bg-white">
-            <div className="flex items-center gap-2 font-bold text-purple-700"><Users size={24} /> <h3>Productos del Proveedor</h3></div>
+            <div className="flex items-center gap-2 font-bold text-purple-700"><Users size={24} /> <h3 className="truncate">Productos del Proveedor</h3></div>
             <select className="w-full p-2 border rounded text-sm outline-none focus:border-purple-500" value={proveedorSeleccionado} onChange={(e) => setProveedorSeleccionado(e.target.value)}>
               <option value="">-- Seleccionar Proveedor --</option>
               {proveedoresLista.map(prov => <option key={prov.id} value={prov.id}>{prov.Nombre || prov.name}</option>)}
             </select>
-            <Button onClick={ejecutarReporteProveedor} className="w-full bg-purple-700 text-white font-bold uppercase tracking-widest">Listar</Button>
+            <Button onClick={ejecutarReporteProveedor} className="w-full bg-purple-700 text-white font-bold uppercase tracking-widest">{loadingProveedor ? <Loader2 className="animate-spin" /> : "Listar"}</Button>
+          </Card>
+
+          <Card className="p-6 space-y-4 border-t-4 border-orange-600 shadow-lg bg-white">
+            <div className="flex items-center gap-2 font-bold text-orange-700"><Undo2 size={24} /> <h3 className="truncate">Devoluciones</h3></div>
+            <div className="grid grid-cols-2 gap-2">
+              <input type="date" className="p-2 border rounded text-sm w-full outline-none focus:border-orange-500" value={fechaInicioDev} onChange={(e) => setFechaInicioDev(e.target.value)} />
+              <input type="date" className="p-2 border rounded text-sm w-full outline-none focus:border-orange-500" value={fechaFinDev} onChange={(e) => setFechaFinDev(e.target.value)} />
+            </div>
+            <Button onClick={ejecutarReporteDevoluciones} className="w-full bg-orange-700 hover:bg-orange-800 text-white font-bold uppercase tracking-widest">{loadingDevoluciones ? <Loader2 className="animate-spin" /> : "Generar"}</Button>
           </Card>
         </div>
       )}
@@ -331,6 +388,41 @@ export function Reportes() {
                           {p.unidades_disponibles} UNIDADES
                         </span>
                       </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
+
+        {resultadoDevoluciones.length > 0 && (!imprimiendo || seleccionVista === '4' || seleccionVista === 'todos') && (
+          <Card className={`p-8 border-0 bg-white relative ${imprimiendo ? 'border border-slate-200 shadow-none p-6 block overflow-visible' : 'shadow-2xl overflow-hidden'}`}>
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-orange-600 print:h-2"></div>
+            <h4 className="font-black text-xl flex items-center gap-2 text-slate-800 uppercase tracking-tighter mb-8 print:mb-6">
+              <Undo2 className="text-orange-600 print:text-orange-800" size={28} /> Reporte de Devoluciones
+            </h4>
+            <div className="overflow-hidden border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
+              <table className="w-full text-left print:border-collapse">
+                <thead className="bg-slate-50 border-b text-[12px] font-black text-slate-400 uppercase tracking-widest print:bg-slate-100 print:text-slate-700 print:border-slate-300">
+                  <tr>
+                    <th className="p-6 print:p-3">ID Sol.</th>
+                    <th className="p-6 print:p-3">Producto</th>
+                    <th className="p-6 print:p-3 text-center">Cantidad</th>
+                    <th className="p-6 print:p-3">Motivo</th>
+                    <th className="p-6 print:p-3">Fecha</th>
+                    <th className="p-6 print:p-3">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 print:divide-slate-200">
+                  {resultadoDevoluciones.map((d, index) => (
+                    <tr key={index}>
+                      <td className="p-6 print:p-3 font-mono text-slate-600 text-xs">#{d.id_solicitud}</td>
+                      <td className="p-6 print:p-3 font-black text-slate-700 uppercase text-xs">{d.producto}</td>
+                      <td className="p-6 print:p-3 text-center font-bold text-slate-700 text-xs">{d.cantidad}</td>
+                      <td className="p-6 print:p-3 text-slate-500 text-xs">{d.motivo || 'N/A'}</td>
+                      <td className="p-6 print:p-3 font-mono text-slate-600 text-xs">{new Date(d.fecha).toLocaleDateString('es-NI', { timeZone: 'UTC' })}</td>
+                      <td className="p-6 print:p-3 font-black text-orange-600 uppercase text-xs">{d.estado}</td>
                     </tr>
                   ))}
                 </tbody>

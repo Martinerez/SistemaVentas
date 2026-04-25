@@ -193,3 +193,22 @@ class ProductosPorProveedorView(APIView):
             result = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
         return Response(result)
+
+class ReporteDevolucionesView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    def get(self, request):
+        inicio = request.query_params.get('inicio')
+        fin = request.query_params.get('fin')
+        
+        if not inicio or not fin:
+            return Response({"error": "Faltan fechas de inicio y fin"}, status=400)
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT * FROM devoluciones_por_fecha(%s, %s)", [inicio, fin])
+                columns = [col[0] for col in cursor.description]
+                result = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            return Response(result)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
