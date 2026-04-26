@@ -1,6 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
+    ReportePerdidasView,
     VentaViewSet,
     DetalleVentaViewSet,
     DashboardStatsView,
@@ -25,4 +26,5 @@ urlpatterns = [
     path('reporte-pivot/', ReportePivotVentasView.as_view(), name='reporte-pivot'),
     path('productos-proveedor/', ProductosPorProveedorView.as_view(), name='reporte-productos-proveedor'),
     path('reporte-devoluciones/', ReporteDevolucionesView.as_view(), name='reporte-devoluciones'),
+    path('reporte-perdidas/', ReportePerdidasView.as_view(), name='reporte-perdidas'),
 ]

@@ -154,7 +154,7 @@ class DashboardStatsView(APIView):
 
         return Response(response_data)
 
-# --- REPORTES AVANZADOS ---
+# --- REPORTES GENERALES ---
 class ReporteGerencialView(APIView):
     permission_classes = [IsAuthenticated, IsAdminRole]
     def get(self, request):
@@ -210,5 +210,29 @@ class ReporteDevolucionesView(APIView):
                 columns = [col[0] for col in cursor.description]
                 result = [dict(zip(columns, row)) for row in cursor.fetchall()]
             return Response(result)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
+        
+class ReportePerdidasView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    def get(self, request):
+        inicio = request.query_params.get('inicio')
+        fin = request.query_params.get('fin')
+
+        if not inicio or not fin:
+            return Response({"error": "Faltan fechas"}, status=400)
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT * FROM perdidas_por_fecha(%s, %s)",
+                    [inicio, fin]
+                )
+                columns = [col[0] for col in cursor.description]
+                result = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+            return Response(result)
+
         except Exception as e:
             return Response({"error": str(e)}, status=400)
