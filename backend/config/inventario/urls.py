@@ -10,7 +10,9 @@ from .views import (
     DetalleSolicitudDevolucionViewSet,
     ProcesarPerdidaView,
     ProcesarDevolucionView,
-    DevolverStockView
+    DevolverStockView,
+    ReporteComprasFiltradasView,
+    ReporteProductosSinMovimientoView,
 )
 
 router = DefaultRouter()
@@ -23,11 +25,15 @@ router.register(r'solicitudes-devolucion', SolicitudDevolucionViewSet)
 router.register(r'detalles-solicitud', DetalleSolicitudDevolucionViewSet)
 
 urlpatterns = [
-    # 🔥 APIs personalizadas (lógica)
+    # 🔥 APIs personalizadas (lógica transaccional)
     path('procesar-perdida/', ProcesarPerdidaView.as_view(), name='procesar-perdida'),
     path('procesar-devolucion/', ProcesarDevolucionView.as_view(), name='procesar-devolucion'),
     path('devolver-stock/', DevolverStockView.as_view(), name='devolver-stock'),
 
-    # 🔹 CRUD automático
+    # --- Reportes de inventario (funciones sp_) ---
+    path('reporte-compras-filtradas/', ReporteComprasFiltradasView.as_view(), name='reporte-compras-filtradas'),
+    path('reporte-productos-sin-movimiento/', ReporteProductosSinMovimientoView.as_view(), name='reporte-productos-sin-movimiento'),
+
+    # 🔹 CRUD automático (ViewSets)
     path('', include(router.urls)),
 ]

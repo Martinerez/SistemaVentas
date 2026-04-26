@@ -154,7 +154,7 @@ class DashboardStatsView(APIView):
 
         return Response(response_data)
 
-# --- REPORTES GENERALES ---
+# --- REPORTES GENERALES / AVANZADOS ---
 class ReporteGerencialView(APIView):
     permission_classes = [IsAuthenticated, IsAdminRole]
     def get(self, request):
@@ -176,7 +176,7 @@ class ReportePivotVentasView(APIView):
             cursor.execute("SELECT * FROM reporte_mensual_producto_pivot(%s, %s)", [anio, prod_id])
             columns = [col[0] for col in cursor.description]
             row = cursor.fetchone()
-        if row: return Response(dict(zip(columns, row)))
+        if row: return Response({k.lower(): v for k, v in zip(columns, row)})
         return Response({"producto": "Sin datos", "ene":0, "feb":0, "mar":0, "abr":0, "may":0, "jun":0, "jul":0, "ago":0, "sep":0, "oct":0, "nov":0, "dic":0})
     
 class ProductosPorProveedorView(APIView):
@@ -200,7 +200,7 @@ class ReporteDevolucionesView(APIView):
     def get(self, request):
         inicio = request.query_params.get('inicio')
         fin = request.query_params.get('fin')
-        
+
         if not inicio or not fin:
             return Response({"error": "Faltan fechas de inicio y fin"}, status=400)
 
@@ -208,11 +208,12 @@ class ReporteDevolucionesView(APIView):
             with connection.cursor() as cursor:
                 cursor.execute("SELECT * FROM devoluciones_por_fecha(%s, %s)", [inicio, fin])
                 columns = [col[0] for col in cursor.description]
-                result = [dict(zip(columns, row)) for row in cursor.fetchall()]
+                result = [{k.lower(): v for k, v in zip(columns, row)} for row in cursor.fetchall()]
             return Response(result)
         except Exception as e:
             return Response({"error": str(e)}, status=400)
-        
+
+
 class ReportePerdidasView(APIView):
     permission_classes = [IsAuthenticated, IsAdminRole]
 
@@ -230,9 +231,139 @@ class ReportePerdidasView(APIView):
                     [inicio, fin]
                 )
                 columns = [col[0] for col in cursor.description]
-                result = [dict(zip(columns, row)) for row in cursor.fetchall()]
-
+                result = [{k.lower(): v for k, v in zip(columns, row)} for row in cursor.fetchall()]
             return Response(result)
-
         except Exception as e:
+            return Response({"error": str(e)}, status=400)
+
+
+# --- REPORTES AVANZADOS (funciones sp_) ---
+
+class ReporteVentasFiltradasView(APIView):
+    """
+    Filtra ventas por rango de fechas y estado.
+    Query params: inicio, fin, estado (opcional: 'Completada' | 'Anulada')
+    Llama a: sp_ventas_filtradas(inicio, fin, estado, usuario_id, monto_min, monto_max)
+    """
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    def get(self, request):
+        inicio = request.query_params.get('inicio')
+        fin = request.query_params.get('fin')
+        estado = request.query_params.get('estado', None)  # None = todos
+
+        if not inicio or not fin:
+            return Response({"error": "Faltan fechas de inicio y fin"}, status=400)
+
+        try:
+            with connection.cursor() as cursor:
+                # sp_ventas_filtradas(inicio, fin, estado, usuario_id, monto_min, monto_max)
+                # Si estado llega como cadena vacía, se normaliza a None → NULL en PostgreSQL.
+                estado_param = estado if estado else None
+                cursor.execute(
+                    "SELECT * FROM sp_ventas_filtradas(%s, %s, %s, %s, %s, %s)",
+                    [inicio, fin, estado_param, None, None, None]
+                )
+                columns = [col[0] for col in cursor.description]
+                result = [{k.lower(): v for k, v in zip(columns, row)} for row in cursor.fetchall()]
+            return Response(result)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
+
+
+class ReporteTopProductosView(APIView):
+    """
+    Devuelve los N productos más vendidos en un periodo.
+    Query params: inicio, fin, limite (default 10)
+    Llama a: sp_top_productos(inicio, fin, limite)
+    """
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    def get(self, request):
+        inicio = request.query_params.get('inicio')
+        fin = request.query_params.get('fin')
+        limite = request.query_params.get('limite', 10)
+
+        if not inicio or not fin:
+            return Response({"error": "Faltan fechas de inicio y fin"}, status=400)
+
+        try:
+            limite = int(limite)
+        except (ValueError, TypeError):
+            return Response({"error": "El parámetro 'limite' debe ser un número entero"}, status=400)
+
+        try:
+            with connection.cursor() as cursor:
+                # sp_top_productos acepta solo (inicio, fin).
+                # El límite se aplica a nivel SQL para no modificar la firma de la función.
+                cursor.execute(
+                    "SELECT * FROM sp_top_productos(%s, %s) LIMIT %s",
+                    [inicio, fin, limite]
+                )
+                columns = [col[0] for col in cursor.description]
+                result = [{k.lower(): v for k, v in zip(columns, row)} for row in cursor.fetchall()]
+            return Response(result)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
+
+
+class ReporteGananciaProductoView(APIView):
+    """
+    Calcula la ganancia bruta por producto en un periodo.
+    Query params: inicio, fin, producto_id (opcional)
+    Llama a: sp_ganancia_producto(inicio, fin, producto_id)
+    """
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    def get(self, request):
+        inicio = request.query_params.get('inicio')
+        fin = request.query_params.get('fin')
+        producto_id = request.query_params.get('productoId', None)
+
+        if not inicio or not fin:
+            return Response({"error": "Faltan fechas de inicio y fin"}, status=400)
+
+        try:
+            with connection.cursor() as cursor:
+                # Normalizar cadena vacía a None → NULL en PostgreSQL
+                producto_id_param = producto_id if producto_id else None
+                cursor.execute(
+                    "SELECT * FROM sp_ganancia_producto(%s, %s, %s)",
+                    [inicio, fin, producto_id_param]
+                )
+                columns = [col[0] for col in cursor.description]
+                result = [{k.lower(): v for k, v in zip(columns, row)} for row in cursor.fetchall()]
+            return Response(result)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
+
+
+class ReporteComparacionVentasView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    def get(self, request):
+        # 1. Capturamos los 4 parámetros
+        inicio_a = request.query_params.get('inicioA')
+        fin_a = request.query_params.get('finA')
+        inicio_b = request.query_params.get('inicioB')
+        fin_b = request.query_params.get('finB')
+
+        # 2. Validación de seguridad
+        if not all([inicio_a, fin_a, inicio_b, fin_b]):
+            return Response({"error": "Faltan fechas para comparar"}, status=400)
+
+        try:
+            with connection.cursor() as cursor:
+                # 3. Llamada con el nombre exacto de la función
+                cursor.execute(
+    "SELECT * FROM sp_comparar_ventas(%s::DATE, %s::DATE, %s::DATE, %s::DATE)",
+    [inicio_a, fin_a, inicio_b, fin_b]
+)
+                columns = [col[0] for col in cursor.description]
+                # 4. Normalización a minúsculas para React
+                result = [{k.lower(): v for k, v in zip(columns, row)} for row in cursor.fetchall()]
+            return Response(result)
+        except Exception as e:
+            # Tip: Esto imprimirá el error real en tu terminal de Django
+            print(f"Error en comparación: {str(e)}") 
             return Response({"error": str(e)}, status=400)
