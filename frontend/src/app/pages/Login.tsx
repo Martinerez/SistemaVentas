@@ -1,3 +1,27 @@
+/**
+ * @fileoverview Página de Login — Autenticación de Usuarios
+ *
+ * Único punto de entrada pública del sistema. Autentica al usuario
+ * contra el endpoint JWT del backend y almacena los tokens para la
+ * sesión.
+ *
+ * FLUJO DE AUTENTICACIÓN:
+ *   1. Usuario ingresa email y contraseña.
+ *   2. `handleLogin` normaliza el email (lowercase + trim) para evitar
+ *      errores por diferencias de capitalizón (ej: Admin@Mail.com vs admin@mail.com).
+ *   3. POST /api/token/ → Django verifica credenciales con CustomTokenObtainPairView.
+ *   4. Si son correctas: recibe { access, refresh } + claims personalizados (rol, nombre).
+ *   5. `login(access, refresh)` del AuthContext guarda los tokens en localStorage
+ *      y actualiza el estado global de la sesión.
+ *   6. navigate("/") → Redirige al dashboard.
+ *
+ * NORMALIZACIÓN DEL EMAIL:
+ *   `email.toLowerCase().trim()` antes de enviar al backend:
+ *   - toLowerCase(): El campo Email del modelo Django es case-sensitive en la BD.
+ *     Sin normalizar, 'Admin@mail.com' y 'admin@mail.com' fallarían.
+ *   - trim(): Elimina espacios accidentales que los gestores de contraseñas
+ *     a veces añaden al autocompletar.
+ */
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
@@ -15,6 +39,16 @@ export function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  /**
+   * Maneja el envío del formulario de login.
+   *
+   * e.preventDefault(): Evita la recarga de página por defecto del form HTML.
+   * El error se muestra como toast usando el mensaje del backend si existe
+   * (error.response?.data?.detail), o un mensaje genérico como fallback.
+   * Esto da retroalimentación precisa sin exponer detalles internos del servidor.
+   *
+   * @param e - Evento de submit del formulario HTML.
+   */
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -24,16 +58,19 @@ export function Login() {
 
     setIsLoading(true);
     try {
-     const cleanEmail = email.toLowerCase().trim();
+      // Normalizar email: minusculas + sin espacios extremos
+      const cleanEmail = email.toLowerCase().trim();
       const response = await api.post("/token/", {
-        Email: cleanEmail,
+        Email: cleanEmail,  // El backend espera campo 'Email' (PascalCase) por USERNAME_FIELD
         password: password
       });
-      
+
+      // Guardar tokens y actualizar estado global de sesión
       login(response.data.access, response.data.refresh);
       toast.success("¡Bienvenido al sistema!");
       navigate("/");
     } catch (error: any) {
+        // Mostrar el mensaje de error del backend si existe, o uno genérico
         toast.error(error.response?.data?.detail || "Credenciales incorrectas o usuario no encontrado.");
     } finally {
         setIsLoading(false);
