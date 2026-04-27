@@ -1,3 +1,36 @@
+/**
+ * @fileoverview Página de Reportes Gerenciales — "La Bendición de Dios"
+ *
+ * Página más compleja del sistema. Centraliza 11 tipos de reportes independientes
+ * que se pueden consultar, imprimir en PDF y exportar a Excel.
+ *
+ * ARQUITECTURA DE ESTADO:
+ *   Cada reporte tiene su propio par de estados:
+ *   - `resultado*`:  Los datos recibidos de la API (array o objeto).
+ *   - `loading*`:    Boolean que controla el spinner mientras se carga.
+ *   Separar los estados por reporte permite que múltiples reportes muestren
+ *   sus datos simultáneamente en la misma página sin interferirse.
+ *
+ * FLUJO GLOBAL DE FECHAS:
+ *   Los estados `fechaInicio` y `fechaFin` son compartidos por la mayoría
+ *   de reportes. Se ingresan UNA SOLA VEZ en la barra de "Rango de Fechas
+ *   Global" y se reutilizan en cada petición. Esto evita que el usuario
+ *   ingrese las mismas fechas repetidamente.
+ *
+ * TRANSFORMACIÓN DE DATOS — Reporte de Comparación:
+ *   La función sp_comparar_ventas() devuelve UNA SOLA FILA con columnas:
+ *     { ventas_a, productos_a, ventas_b, productos_b }
+ *   El frontend transforma esa fila en MÚLTIPLES FILAS VISUALES para la tabla:
+ *     Fila 1: { metrica: 'Ventas Totales',    periodo_a, periodo_b, diferencia }
+ *     Fila 2: { metrica: 'Productos Vendidos', periodo_a, periodo_b, diferencia }
+ *   La diferencia se calcula aquí (frontend) porque es trivial y evita
+ *   modificar la función SQL almacenada.
+ *
+ * MODO IMPRESIÓN:
+ *   El estado `imprimiendo` controla la visibilidad de elementos de UI.
+ *   Al activarse, oculta filtros y controles, y muestra un header formal
+ *   de documento. El CSS `@media print` ajusta colores para impresoras.
+ */
 import React, { useState, useEffect } from 'react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -8,26 +41,41 @@ import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
 export function Reportes() {
+  // ── Datos maestros cargados al montar (listas para los selects) ─────────────
   const [productosLista, setProductosLista] = useState<any[]>([]);
   const [proveedoresLista, setProveedoresLista] = useState<any[]>([]);
+
+  // ── Rango de fechas GLOBAL compartido por la mayoría de reportes ────────────
+  // Un solo par de fechas para evitar ingresarlas repetidamente
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
+
+  // ── Estados específicos de cada reporte (datos + spinner) ───────────────────
   const [anio, setAnio] = useState(new Date().getFullYear().toString());
   const [productoSeleccionado, setProductoSeleccionado] = useState('');
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState('');
-  const [resultadoGerencial, setResultadoGerencial] = useState<any>(null);
-  const [datosPivot, setDatosPivot] = useState<any>(null);
-  const [productosProveedor, setProductosProveedor] = useState<any[]>([]);
-  const [resultadoDevoluciones, setResultadoDevoluciones] = useState<any[]>([]);
 
+  /** Reporte Gerencial: { total_ventas, promedio_venta, producto_mas_vendido } */
+  const [resultadoGerencial, setResultadoGerencial] = useState<any>(null);
   const [loadingGerencial, setLoadingGerencial] = useState(false);
+
+  /** Pivot mensual: una fila con 12 columnas (ene..dic) para el producto seleccionado */
+  const [datosPivot, setDatosPivot] = useState<any>(null);
   const [loadingPivot, setLoadingPivot] = useState(false);
+
+  /** Lista de productos activos suministrados por un proveedor */
+  const [productosProveedor, setProductosProveedor] = useState<any[]>([]);
   const [loadingProveedor, setLoadingProveedor] = useState(false);
+
+  /** Lista de devoluciones en el rango de fechas */
+  const [resultadoDevoluciones, setResultadoDevoluciones] = useState<any[]>([]);
   const [loadingDevoluciones, setLoadingDevoluciones] = useState(false);
+
+  /** Estado para el modo de impresión PDF — oculta controles de UI */
   const [imprimiendo, setImprimiendo] = useState(false);
 
-  // Estado para la elección del usuario --La pregunta de los 3 reportes
-
+  // ── Reportes avanzados (sp_*) ────────────────────────────────────────────────
+  /** Filtro de estado: '' = todas, 'Completada', 'Anulada' */
   const [estadoVentaFiltrada, setEstadoVentaFiltrada] = useState('');
   const [resultadoVentasFiltradas, setResultadoVentasFiltradas] = useState<any[]>([]);
   const [loadingVentasFiltradas, setLoadingVentasFiltradas] = useState(false);
@@ -36,14 +84,24 @@ export function Reportes() {
   const [resultadoTopProductos, setResultadoTopProductos] = useState<any[]>([]);
   const [loadingTopProductos, setLoadingTopProductos] = useState(false);
 
+  /** '' = todos los productos; un ID = filtrar por producto específico */
   const [productoGananciaId, setProductoGananciaId] = useState('');
   const [resultadoGananciaProducto, setResultadoGananciaProducto] = useState<any[]>([]);
   const [loadingGananciaProducto, setLoadingGananciaProducto] = useState(false);
 
+  /**
+   * Comparación de periodos: 4 fechas independientes (2 por periodo).
+   * Son independientes del rango global porque comparan dos rangos distintos.
+   */
   const [fechaInicioA, setFechaInicioA] = useState('');
   const [fechaFinA, setFechaFinA] = useState('');
   const [fechaInicioB, setFechaInicioB] = useState('');
   const [fechaFinB, setFechaFinB] = useState('');
+  /**
+   * resultadoComparacion: Array TRANSFORMADO en el frontend.
+   * La API devuelve 1 objeto → aquí se convierte en 2+ filas para la tabla.
+   * Ver ejecutarComparacion() para el detalle de la transformación.
+   */
   const [resultadoComparacion, setResultadoComparacion] = useState<any[]>([]);
   const [loadingComparacion, setLoadingComparacion] = useState(false);
 
@@ -57,9 +115,22 @@ export function Reportes() {
 
   const [resultadoPerdidas, setResultadoPerdidas] = useState<any[]>([]);
   const [loadingPerdidas, setLoadingPerdidas] = useState(false);
+
+  /**
+   * seleccionVista: Controla qué reporte(s) incluir en PDF/Excel.
+   * 'todos' = todos los reportes generados; '1'..'11' = uno específico.
+   */
   const [seleccionVista, setSeleccionVista] = useState<string>('todos');
 
-  // ── Helper: validación de fechas compartida por todos los reportes ──────────
+  /**
+   * Valida que ambas fechas estén presentes y que inicio <= fin.
+   * Reutilizado por todos los reportes para evitar duplicar la lógica.
+   *
+   * @param inicio - Fecha de inicio en formato YYYY-MM-DD.
+   * @param fin - Fecha de fin en formato YYYY-MM-DD.
+   * @param label - Prefijo opcional para el mensaje de error (ej: 'Periodo A').
+   * @returns true si las fechas son válidas, false si hay un error (muestra toast).
+   */
   const validarFechas = (inicio: string, fin: string, label = ''): boolean => {
     const prefix = label ? `${label}: ` : '';
     if (!inicio || !fin) { toast.error(`${prefix}Selecciona ambas fechas`); return false; }
@@ -68,6 +139,22 @@ export function Reportes() {
   };
 
 
+  /**
+   * Efecto de carga inicial de datos maestros.
+   *
+   * Carga productos y proveedores una sola vez al montar el componente.
+   * Ambas peticiones se lanzan en PARALELO con Promise.all() para minimizar
+   * el tiempo de espera (en lugar de hacerlas secuencialmente).
+   *
+   * AbortController: Cancela las peticiones en vuelo si el componente se
+   * desmonta antes de que terminen (ej: el usuario navega a otra página).
+   * Sin esto, el callback del .then() intentaría llamar a setState en un
+   * componente ya desmontado, causando un memory leak.
+   *
+   * `?? prodRes.data ?? []`: La API puede devolver datos paginados
+   * ({ results: [...] }) o directamente un array. El operador nullish coalescing
+   * maneja ambos formatos de forma segura.
+   */
   useEffect(() => {
     const controller = new AbortController();
     const cargarDatos = async () => {
@@ -79,12 +166,14 @@ export function Reportes() {
         setProductosLista(prodRes.data.results ?? prodRes.data ?? []);
         setProveedoresLista(provRes.data.results ?? provRes.data ?? []);
       } catch (e: any) {
+        // CanceledError: Ignorar — es el resultado esperado del abort al desmontar.
         if (e.name !== 'CanceledError') toast.error("Error al cargar datos maestros");
       }
     };
     cargarDatos();
+    // Función de limpieza: cancela las peticiones al desmontar
     return () => controller.abort();
-  }, []);
+  }, []); // [] = solo se ejecuta al montar, no en re-renders
 
   const ejecutarReporteGerencial = async () => {
     if (!validarFechas(fechaInicio, fechaFin)) return;
@@ -205,6 +294,32 @@ export function Reportes() {
     } catch (e) { toast.error("Error al obtener ganancias"); } finally { setLoadingGananciaProducto(false); }
   };
 
+  /**
+   * Ejecuta el reporte de comparación de ventas entre dos periodos.
+   *
+   * TRANSFORMACIÓN CRÍTICA — De "Fila Única" a "Múltiples Filas Visuales":
+   *
+   * La función SQL sp_comparar_ventas() retorna UNA SOLA FILA:
+   *   { ventas_a: 5000, productos_a: 80, ventas_b: 7500, productos_b: 120 }
+   *
+   * El frontend necesita MÚLTIPLES FILAS para la tabla comparativa:
+   *   | Métrica          | Periodo A | Periodo B | Diferencia |
+   *   |------------------|-----------|-----------|------------|
+   *   | Ventas Totales   | C$5,000   | C$7,500   | +C$2,500   |
+   *   | Productos Vendidos | 80      | 120       | +40        |
+   *
+   * Por eso se construye `tablaComparativa`: un array donde cada elemento
+   * es una fila de la tabla, creado a partir de los campos de la fila única.
+   *
+   * La diferencia (periodo_b - periodo_a) se calcula aquí para:
+   *   1. Colorear en verde (positivo) o rojo (negativo) en la tabla.
+   *   2. Mostrar el signo '+' explícitamente si la diferencia es positiva.
+   *   3. Evitar modificar la función SQL almacenada.
+   *
+   * `esMonto`: Flag que indica si el valor debe formatearse con 'C$'.
+   *   true  = dinero (Ventas Totales)
+   *   false = cantidad entera (Productos Vendidos)
+   */
   const ejecutarComparacion = async () => {
     if (!validarFechas(fechaInicioA, fechaFinA, 'Periodo A')) return;
     if (!validarFechas(fechaInicioB, fechaFinB, 'Periodo B')) return;
@@ -212,29 +327,31 @@ export function Reportes() {
     try {
       const res = await api.get(`/ventas/reporte-comparacion-ventas/?inicioA=${fechaInicioA}&finA=${fechaFinA}&inicioB=${fechaInicioB}&finB=${fechaFinB}`);
 
-      // La API devuelve un array de 1 objeto con todos los totales.
-      // Lo transformamos en 2 filas para la tabla comparativa.
       if (!res.data || res.data.length === 0) {
         toast.error("Sin resultados para estos periodos");
         setResultadoComparacion([]);
         return;
       }
 
+      // Extraer la única fila devuelta por la API
       const d = res.data[0];
+
+      // Transformar: 1 fila de la API → N filas visuales de la tabla
       const tablaComparativa = [
         {
           metrica: 'Ventas Totales',
           periodo_a: Number(d.ventas_a || 0),
           periodo_b: Number(d.ventas_b || 0),
+          // diferencia: positivo = mejora, negativo = caída
           diferencia: Number(d.ventas_b || 0) - Number(d.ventas_a || 0),
-          esMonto: true,
+          esMonto: true, // Formatear como C$
         },
         {
           metrica: 'Productos Vendidos',
           periodo_a: Number(d.productos_a || 0),
           periodo_b: Number(d.productos_b || 0),
           diferencia: Number(d.productos_b || 0) - Number(d.productos_a || 0),
-          esMonto: false,
+          esMonto: false, // Formatear como número entero
         },
       ];
 
@@ -408,6 +525,11 @@ export function Reportes() {
     saveAs(new Blob([buffer]), `Reporte_Miscelanea_BendicionDeDios_${new Date().getTime()}.xlsx`);
   };
 
+  /**
+   * Determina si hay datos suficientes para generar el PDF/Excel.
+   * Evalúa si el reporte seleccionado tiene datos cargados.
+   * Impedir imprimir una página en blanco mejora la experiencia del usuario.
+   */
   const puedeImprimir = () => {
     if (seleccionVista === 'todos') {
       return !!resultadoGerencial || !!datosPivot || productosProveedor.length > 0 || resultadoDevoluciones.length > 0 || resultadoPerdidas.length > 0 || resultadoVentasFiltradas.length > 0 || resultadoTopProductos.length > 0 || resultadoGananciaProducto.length > 0 || resultadoComparacion.length > 0 || resultadoComprasFiltradas.length > 0 || resultadoSinMovimiento.length > 0;
@@ -426,6 +548,14 @@ export function Reportes() {
     return false;
   };
 
+  /**
+   * Activa el modo impresión y lanza el diálogo de impresión del navegador.
+   *
+   * setTimeout(200ms): Da tiempo al React para re-renderizar con `imprimiendo=true`
+   * (ocultando filtros y mostrando el header formal) ANTES de que window.print()
+   * capture el estado visual de la página.
+   * Sin este delay, la UI aún mostraría los controles en el PDF.
+   */
   const handleImprimirPDF = () => {
     if (!puedeImprimir()) {
       toast.error("Debe generar el reporte antes, para generar el PDF.");

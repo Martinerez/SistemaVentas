@@ -1,3 +1,24 @@
+/**
+ * @fileoverview Página de Dashboard — Panel de Control General
+ *
+ * Primera pantalla que ve el usuario al iniciar sesión. Muestra un
+ * resumen ejecutivo del estado del negocio: métricas clave, gráfico
+ * de tendencia de ventas, alertas de stock bajo y ventas recientes.
+ *
+ * FILTRO DE PRIVACIDAD POR ROL:
+ *   El backend (DashboardStatsView) devuelve `weeklySales` y `weeklyLosses`
+ *   como `null` para usuarios con rol 'vendedor'. En el frontend, la constante
+ *   `isAdmin` controla qué tarjetas de stats se muestran:
+ *   - Admin: Ve las 4 tarjetas (incluyendo Ventas Semanales y Pérdidas).
+ *   - Vendedor: Solo ve Total de Productos y Proveedores Activos.
+ *   El filtro `stats.filter(stat => isAdmin || !stat.adminOnly)` aplica esta
+ *   lógica declarativamente en lugar de condiciones if/else dispersas.
+ *
+ * GRÁFICO DE LÍNEA (Recharts):
+ *   Muestra las ventas diarias de los últimos 7 días.
+ *   Los datos vienen pre-agregados del backend (TruncDate + Sum en Django)
+ *   para evitar enviar miles de registros individuales al frontend.
+ */
 import {
   Package,
   DollarSign,
@@ -24,16 +45,28 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+/**
+ * Componente de la página de Dashboard.
+ *
+ * @state loading - Controla el spinner inicial mientras se carga la API.
+ * @state statsData - Datos de métricas recibidos de /api/ventas/dashboard/stats/.
+ */
 export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [statsData, setStatsData] = useState<any>(null);
   const { userRole } = useAuth();
+  // isAdmin: constante derivada del contexto, usada para filtrar tarjetas y features
   const isAdmin = userRole === 'admin';
 
   useEffect(() => {
     fetchDashboardStats();
   }, []);
 
+  /**
+   * Carga las estadísticas del dashboard al montar el componente.
+   * El endpoint /api/ventas/dashboard/stats/ agrega todos los datos necesarios
+   * en una sola petición, evitando múltiples llamadas a la API.
+   */
   const fetchDashboardStats = async () => {
     try {
       const { data } = await api.get("/ventas/dashboard/stats/");
@@ -64,6 +97,13 @@ export function Dashboard() {
     chartData,
   } = statsData;
 
+  /**
+   * Definición de las tarjetas de métricas.
+   * `adminOnly: true` marca las tarjetas que contienen datos financieros
+   * sensibles, filtradas según el rol en `visibleStats`.
+   * El valor de weeklySales usa `!= null` (no `!== null`) para capturar
+   * tanto null como undefined, ya que el backend puede devolver cualquiera.
+   */
   const stats = [
     {
       icon: Package,

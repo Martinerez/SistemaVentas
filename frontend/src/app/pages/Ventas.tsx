@@ -1,3 +1,33 @@
+/**
+ * @fileoverview Página de Ventas — Punto de Venta (POS) e Historial
+ *
+ * Contiene dos vistas en tabs:
+ *   1. "Punto de Venta": Interfaz de POS tipo kiosko para registrar ventas.
+ *   2. "Historial": Tabla de ventas previas con expansión por detalle y anulación.
+ *
+ * SINCRONIZACIÓN DE INVENTARIO EN EL POS (fetchInventoryForSale):
+ *   Para mostrar los productos disponibles, el frontend hace 3 peticiones
+ *   paralelas y las ensambla en memoria:
+ *     - /inventario/inventarios/ → Todas las unidades físicas con su Estado.
+ *     - /inventario/detalles-entrada/ → Qué producto es cada unidad (FK).
+ *     - /catalogo/productos/ → Datos del producto (nombre, precio).
+ *
+ *   Se filtran las unidades 'Disponibles' y se agrupan por producto para
+ *   mostrar una sola tarjeta con el stock total (`availableQty`) y la lista
+ *   de IDs de inventario disponibles (`inventarioIds`).
+ *
+ * FLUJO DE CHECKOUT:
+ *   Al cobrar, se envían los IDs específicos de inventario (no el productId):
+ *   `item.inventarioIds.slice(0, item.quantity)` toma los primeros N IDs
+ *   disponibles del producto (donde N = cantidad en carrito).
+ *   El backend (ProcesarVentaView) vincula cada ID de inventario a la venta
+ *   y cambia su estado a 'Vendido' de forma atómica.
+ *
+ * ANULACIÓN:
+ *   Solo accesible para admins (isAdmin guard en el JSX).
+ *   Usa un modal de confirmación (ConfirmAnularModal) para prevenir
+ *   anulaciones accidentales. El backend revierte el stock automáticamente.
+ */
 import {
   Plus, Search, ShoppingCart, Minus, Trash2, Loader2, Receipt,
   ChevronDown, ChevronRight, Ban, AlertTriangle, X
@@ -18,7 +48,18 @@ import {
   TableRow,
 } from "../components/ui/table";
 
-// ─── Modal de confirmación de anulación ──────────────────────────────
+/**
+ * Modal de confirmación de anulación de venta.
+ *
+ * Componente separado para mantener la lógica del modal aislada.
+ * El backdrop `onClick={onCancel}` permite cerrar el modal haciendo
+ * clic fuera, siguiendo la convención de UX estándar.
+ *
+ * @param ventaId - ID de la venta a anular (para mostrar al usuario).
+ * @param onConfirm - Callback ejecutado al confirmar la anulación.
+ * @param onCancel - Callback para cerrar el modal sin anular.
+ * @param isLoading - True mientras la petición de anulación está en vuelo.
+ */
 function ConfirmAnularModal({
   ventaId,
   onConfirm,
@@ -99,7 +140,23 @@ function ConfirmAnularModal({
   );
 }
 
-// ─── Fila expandible del historial ───────────────────────────────────
+/**
+ * Fila expandible del historial de ventas.
+ *
+ * Implementa el patrón "master-detail" con una fila principal resumida
+ * y una fila de expansión que muestra los ítems de la venta.
+ *
+ * `expanded`: Estado local de la fila. Cada fila gestiona su propia
+ * expansión independientemente, permitiendo expandir múltiples filas
+ * simultáneamente sin estado en el componente padre.
+ *
+ * La opacidad reducida y fondo rojizo en ventas anuladas comunica
+ * visualmente el estado sin necesitar leer el texto del badge.
+ *
+ * @param venta - Objeto de venta con sus detalles anidados.
+ * @param isAdmin - Determina si se muestra el botón de anulación.
+ * @param onAnular - Callback que recibe la venta para iniciar el flujo de anulación.
+ */
 function VentaRow({
   venta,
   isAdmin,
@@ -238,6 +295,22 @@ export function Ventas() {
     }
   }, [activeTab]);
 
+  /**
+   * Carga y ensambla el catálogo de productos disponibles para el POS.
+   *
+   * Ejecuta 3 peticiones en paralelo y las combina:
+   *   1. inventarios: Todas las unidades físicas (filtra Estado='Disponible').
+   *   2. detalles-entrada: Permite mapear unidad física → producto.
+   *   3. productos: Datos del producto (nombre, precio de venta calculado).
+   *
+   * El mapeo multi-clave (`inv.detalle_entrada_id || inv.detalleEntradaId || ...`)
+   * es defensivo: cubre las diferentes capitalizaciones que la API puede
+   * devolver según la versión del serializer o la normalización.
+   *
+   * El resultado final (`posProducts`) es un array de productos con:
+   *   - `availableQty`: Cuántas unidades disponibles tiene.
+   *   - `inventarioIds`: Los IDs específicos a enviar al backend al vender.
+   */
   const fetchInventoryForSale = async () => {
     try {
       const [invRes, detRes, prodRes] = await Promise.all([
@@ -355,6 +428,19 @@ export function Ventas() {
     0
   );
 
+  /**
+   * Procesa el pago de los ítems en el carrito.
+   *
+   * SELECCIÓN DE UNIDADES FÍSICAS:
+   *   `item.inventarioIds.slice(0, item.quantity)` selecciona los primeros
+   *   N IDs de inventario disponibles, donde N = cantidad en el carrito.
+   *   Estos son los IDs específicos que el backend marcará como 'Vendido'.
+   *
+   * Después de una venta exitosa:
+   *   1. Se limpia el carrito (`setCart([])`).
+   *   2. Se recarga el inventario (`fetchInventoryForSale()`) para que el
+   *      stock en pantalla refleje las unidades recién vendidas.
+   */
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     setIsSubmitting(true);
