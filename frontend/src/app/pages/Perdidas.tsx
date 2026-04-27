@@ -117,8 +117,7 @@ export function Perdidas() {
 
       const payload = {
         usuarioId: userId,
-        tipoPerdida:
-          tipoPerdida === "RechazoDevolucion" ? "RechazoDevolucion" : "Otra",
+        tipoPerdida: tipoPerdida,
         fecha: new Date().toISOString(),
         total: precioPerdido,
         detalles: [

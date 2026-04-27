@@ -10,7 +10,11 @@ from .views import (
     ReporteGerencialView,
     ReportePivotVentasView,
     ProductosPorProveedorView,
-    ReporteDevolucionesView
+    ReporteDevolucionesView,
+    ReporteVentasFiltradasView,
+    ReporteTopProductosView,
+    ReporteGananciaProductoView,
+    ReporteComparacionVentasView,
 )
 
 router = DefaultRouter()
@@ -27,4 +31,9 @@ urlpatterns = [
     path('productos-proveedor/', ProductosPorProveedorView.as_view(), name='reporte-productos-proveedor'),
     path('reporte-devoluciones/', ReporteDevolucionesView.as_view(), name='reporte-devoluciones'),
     path('reporte-perdidas/', ReportePerdidasView.as_view(), name='reporte-perdidas'),
+    # --- Reportes avanzados (sp_) ---
+    path('reporte-ventas-filtradas/', ReporteVentasFiltradasView.as_view(), name='reporte-ventas-filtradas'),
+    path('reporte-top-productos/', ReporteTopProductosView.as_view(), name='reporte-top-productos'),
+    path('reporte-ganancia-producto/', ReporteGananciaProductoView.as_view(), name='reporte-ganancia-producto'),
+    path('reporte-comparacion-ventas/', ReporteComparacionVentasView.as_view(), name='reporte-comparacion-ventas'),
 ]

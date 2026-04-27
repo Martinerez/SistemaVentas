@@ -3,7 +3,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
-from django.db import transaction
+from django.db import transaction, connection
+from datetime import timedelta
 from django.utils import timezone
 from .models import EntradaInventario, DetalleEntradaInventario, Inventario, Perdida, DetallePerdida, SolicitudDevolucion, DetalleSolicitudDevolucion
 from usuarios.models import Usuario
@@ -221,3 +222,63 @@ class DevolverStockView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+
+# --- REPORTES DE INVENTARIO (funciones sp_) ---
+
+class ReporteComprasFiltradasView(APIView):
+    """
+    Filtra entradas de inventario (compras) por rango de fechas y proveedor.
+    Query params: inicio, fin, proveedorId (opcional)
+    Llama a: sp_compras_filtradas(inicio, fin, proveedor_id)
+    """
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    def get(self, request):
+        inicio = request.query_params.get('inicio')
+        fin = request.query_params.get('fin')
+        proveedor_id = request.query_params.get('proveedorId')
+
+        if not inicio or not fin:
+            return Response({"error": "Faltan fechas de inicio y fin"}, status=400)
+
+        try:
+            with connection.cursor() as cursor:
+                # Normalización: Si es cadena vacía o 'null', pasar como None
+                p_id = int(proveedor_id) if proveedor_id and proveedor_id.strip() not in ["", "null"] else None
+                
+                # LLAMADA CORREGIDA: Ahora enviamos 5 parámetros para que PostgreSQL no de error
+                cursor.execute(
+                    "SELECT * FROM sp_compras_filtradas(%s, %s, %s, %s, %s)",
+                    [inicio, fin, p_id, None, None] 
+                )
+                
+                columns = [col[0] for col in cursor.description]
+                result = [{k.lower(): v for k, v in zip(columns, row)} for row in cursor.fetchall()]
+            return Response(result)
+        except Exception as e:
+            # Esto te ayudará a ver el error real en la terminal de Django
+            print(f"Error en Reporte Compras: {str(e)}") 
+            return Response({"error": str(e)}, status=400)
+
+class ReporteProductosSinMovimientoView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    def get(self, request):
+        dias = request.query_params.get('dias', 30)
+        try:
+            # Convertimos los días en un rango de fechas real
+            dias_int = int(dias)
+            fecha_fin = timezone.now().date()
+            fecha_inicio = fecha_fin - timedelta(days=dias_int)
+
+            with connection.cursor() as cursor:
+                # Pasamos los DOS parámetros que la función espera
+                cursor.execute(
+                    "SELECT * FROM sp_productos_sin_movimiento(%s, %s)",
+                    [fecha_inicio, fecha_fin]
+                )
+                columns = [col[0] for col in cursor.description]
+                result = [{k.lower(): v for k, v in zip(columns, row)} for row in cursor.fetchall()]
+            return Response(result)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
