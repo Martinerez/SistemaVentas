@@ -323,7 +323,7 @@ class ReporteGerencialView(APIView):
     def get(self, request):
         inicio, fin = request.query_params.get('inicio'), request.query_params.get('fin')
         with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM reporte_gerencial(%s, %s)", [inicio, fin])
+            cursor.execute("EXEC sp_reporte_gerencial %s, %s", [inicio, fin])
             row = cursor.fetchone()
         return Response({
             "total_ventas": float(row[0]) if row and row[0] else 0,
@@ -352,7 +352,7 @@ class ReportePivotVentasView(APIView):
     def get(self, request):
         anio, prod_id = request.query_params.get('anio'), request.query_params.get('productoId')
         with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM reporte_mensual_producto_pivot(%s, %s)", [anio, prod_id])
+            cursor.execute("EXEC sp_reporte_mensual_producto_pivot %s, %s", [anio, prod_id])
             columns = [col[0] for col in cursor.description]
             row = cursor.fetchone()
         # Normalizar claves a minúsculas para que el frontend lea d.ene, d.feb, etc.
@@ -375,7 +375,7 @@ class ProductosPorProveedorView(APIView):
         if not proveedor_id:
             return Response({"error": "Falta proveedorId"}, status=400)
         with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM reporte_productos_por_proveedor(%s)", [proveedor_id])
+            cursor.execute("EXEC sp_reporte_productos_por_proveedor %s", [proveedor_id])
             columns = [col[0] for col in cursor.description]
             result = [dict(zip(columns, row)) for row in cursor.fetchall()]
         return Response(result)
@@ -395,7 +395,7 @@ class ReporteDevolucionesView(APIView):
             return Response({"error": "Faltan fechas de inicio y fin"}, status=400)
         try:
             with connection.cursor() as cursor:
-                cursor.execute("SELECT * FROM devoluciones_por_fecha(%s, %s)", [inicio, fin])
+                cursor.execute("EXEC sp_devoluciones_por_fecha %s, %s", [inicio, fin])
                 columns = [col[0] for col in cursor.description]
                 # Normalización a minúsculas: El frontend accede a d.producto, d.cantidad, etc.
                 result = [{k.lower(): v for k, v in zip(columns, row)} for row in cursor.fetchall()]
@@ -418,7 +418,7 @@ class ReportePerdidasView(APIView):
             return Response({"error": "Faltan fechas"}, status=400)
         try:
             with connection.cursor() as cursor:
-                cursor.execute("SELECT * FROM perdidas_por_fecha(%s, %s)", [inicio, fin])
+                cursor.execute("EXEC sp_perdidas_por_fecha %s, %s", [inicio, fin])
                 columns = [col[0] for col in cursor.description]
                 result = [{k.lower(): v for k, v in zip(columns, row)} for row in cursor.fetchall()]
             return Response(result)
@@ -457,7 +457,7 @@ class ReporteVentasFiltradasView(APIView):
                 # Normalizar cadena vacía → None → NULL en PostgreSQL
                 estado_param = estado if estado else None
                 cursor.execute(
-                    "SELECT * FROM sp_ventas_filtradas(%s, %s, %s, %s, %s, %s)",
+                    "EXEC sp_ventas_filtradas %s, %s, %s, %s, %s, %s",
                     [inicio, fin, estado_param, None, None, None]
                 )
                 columns = [col[0] for col in cursor.description]
@@ -487,24 +487,32 @@ class ReporteTopProductosView(APIView):
             return Response({"error": "Faltan fechas de inicio y fin"}, status=400)
 
         try:
-            # Validar y convertir 'limite' a entero. Si el usuario envía "abc", falla aquí.
+            # 1. Aseguramos que limite sea un número entero para el recorte final
             limite = int(limite)
         except (ValueError, TypeError):
-            return Response({"error": "El parámetro 'limite' debe ser un número entero"}, status=400)
+            limite = 10
 
         try:
             with connection.cursor() as cursor:
-                # LIMIT aplicado directamente en el SQL envolvente,
-                # ya que la función sp_top_productos solo acepta (inicio, fin).
+                # 2. SQL Server recibe SOLO 2 parámetros: inicio y fin
                 cursor.execute(
-                    "SELECT * FROM sp_top_productos(%s, %s) LIMIT %s",
-                    [inicio, fin, limite]
+                    "EXEC sp_top_productos %s, %s",
+                    [inicio, fin]
                 )
+                
+                # 3. Obtenemos los nombres de las columnas
                 columns = [col[0] for col in cursor.description]
+                
+                # 4. Construimos la lista de diccionarios
                 result = [{k.lower(): v for k, v in zip(columns, row)} for row in cursor.fetchall()]
-            return Response(result)
+            
+            # 5. Recortamos la lista en Python antes de enviarla
+            return Response(result[:limite], status=status.HTTP_200_OK)
+
         except Exception as e:
-            return Response({"error": str(e)}, status=400)
+            # Imprime el error en la consola de Django para saber exactamente qué falla si persiste
+            print(f"DEBUG Error Top Productos: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ReporteGananciaProductoView(APIView):
@@ -536,7 +544,7 @@ class ReporteGananciaProductoView(APIView):
                 # Normalizar cadena vacía → None → NULL en SQL
                 producto_id_param = producto_id if producto_id else None
                 cursor.execute(
-                    "SELECT * FROM sp_ganancia_producto(%s, %s, %s)",
+                    "EXEC sp_ganancia_producto %s, %s, %s",
                     [inicio, fin, producto_id_param]
                 )
                 columns = [col[0] for col in cursor.description]
@@ -588,7 +596,7 @@ class ReporteComparacionVentasView(APIView):
                 # los parámetros como DATE y no como TEXT/TIMESTAMP, evitando
                 # ambigüedad en la resolución de la firma de la función.
                 cursor.execute(
-                    "SELECT * FROM sp_comparar_ventas(%s::DATE, %s::DATE, %s::DATE, %s::DATE)",
+                    "EXEC sp_comparar_ventas %s, %s, %s, %s",
                     [inicio_a, fin_a, inicio_b, fin_b]
                 )
                 columns = [col[0] for col in cursor.description]

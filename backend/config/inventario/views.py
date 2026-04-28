@@ -492,9 +492,10 @@ class ReporteComprasFiltradasView(APIView):
                 # Los parámetros 4 y 5 (None, None) son requeridos por la firma
                 # de la función SQL para mantener compatibilidad con versiones anteriores.
                 cursor.execute(
-                    "SELECT * FROM sp_compras_filtradas(%s, %s, %s, %s, %s)",
-                    [inicio, fin, p_id, None, None]
-                )
+                    "EXEC sp_compras_filtradas %s, %s, %s, %s, %s", 
+                    [inicio, fin, proveedor_id, None, None]
+                    )
+                
 
                 # Normalización de claves a minúsculas para consistencia con el frontend React.
                 # El frontend espera claves snake_case en minúsculas, pero PostgreSQL
@@ -546,8 +547,8 @@ class ReporteProductosSinMovimientoView(APIView):
 
             with connection.cursor() as cursor:
                 cursor.execute(
-                    "SELECT * FROM sp_productos_sin_movimiento(%s, %s)",
-                    [fecha_inicio, fecha_fin]
+                    "EXEC sp_productos_sin_movimiento %s, %s",
+                      [fecha_inicio, fecha_fin]
                 )
                 columns = [col[0] for col in cursor.description]
                 result = [{k.lower(): v for k, v in zip(columns, row)} for row in cursor.fetchall()]

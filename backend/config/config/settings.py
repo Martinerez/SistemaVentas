@@ -142,12 +142,16 @@ WSGI_APPLICATION = 'config.wsgi.application'
 #      (vender el mismo artículo de inventario dos veces simultáneamente).
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'bendicion_de_dios'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),  # Nunca hardcodear
+        'ENGINE': 'mssql',
+        'NAME': os.environ.get('DB_NAME', 'bendicion_de_Dios'),
+        'USER': os.environ.get('DB_USER', 'sa'), # 'sa' es el administrador por defecto en SQL Server
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''), 
         'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+        'PORT': os.environ.get('DB_PORT', '1433'), # 1433 es el puerto estándar de SQL Server
+        'OPTIONS': {
+            # El driver ODBC debe estar instalado en tu sistema
+            'driver': 'ODBC Driver 17 for SQL Server',
+        }
     }
 }
 

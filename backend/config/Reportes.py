@@ -17,7 +17,7 @@ class ReporteGerencialView(APIView):
 
         with connection.cursor() as cursor:
             # Llamamos a la función de PostgreSQL
-            cursor.execute("SELECT * FROM reporte_gerencial(%s, %s)", [inicio, fin])
+            cursor.execute("EXEC sp_reporte_gerencial %s, %s", [inicio, fin])
             row = cursor.fetchone()
             
         if row:
@@ -36,7 +36,7 @@ class ReporteMensualPivotView(APIView):
         producto_id = request.query_params.get('producto_id')
 
         with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM reporte_mensual_producto_pivot(%s, %s)", [anio, producto_id])
+            cursor.execute("EXEC sp_reporte_mensual_producto_pivot %s, %s", [anio, producto_id])
             columns = [col[0] for col in cursor.description]
             row = cursor.fetchone()
             
