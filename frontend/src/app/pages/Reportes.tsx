@@ -601,6 +601,7 @@ export function Reportes() {
         "PRODUCTO",
         "CANTIDAD",
         "MOTIVO",
+        "USUARIO",
         "FECHA",
         "ESTADO",
       ]);
@@ -620,6 +621,7 @@ export function Reportes() {
           d.producto,
           d.cantidad,
           d.motivo || "N/A",
+          d.usuario || "N/A",
           d_fecha.toLocaleDateString("es-NI", { timeZone: "UTC" }),
           d.estado,
         ]);
@@ -1466,7 +1468,7 @@ export function Reportes() {
                 />{" "}
                 Productos abastecidos por el proveedor
               </h4>
-              <div className="overflow-hidden border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
+              <div className="overflow-x-auto border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
                 <table className="w-full text-left print:border-collapse">
                   <thead className="bg-slate-50 border-b text-[12px] font-black text-slate-400 uppercase tracking-widest print:bg-slate-100 print:text-slate-700 print:border-slate-300">
                     <tr>
@@ -1518,7 +1520,7 @@ export function Reportes() {
                 />{" "}
                 Reporte de Devoluciones
               </h4>
-              <div className="overflow-hidden border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
+              <div className="overflow-x-auto border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
                 <table className="w-full text-left print:border-collapse">
                   <thead className="bg-slate-50 border-b text-[12px] font-black text-slate-400 uppercase tracking-widest print:bg-slate-100 print:text-slate-700 print:border-slate-300">
                     <tr>
@@ -1526,6 +1528,7 @@ export function Reportes() {
                       <th className="p-6 print:p-3">Producto</th>
                       <th className="p-6 print:p-3 text-center">Cantidad</th>
                       <th className="p-6 print:p-3">Motivo</th>
+                      <th className="p-6 print:p-3">Usuario</th>
                       <th className="p-6 print:p-3">Fecha</th>
                       <th className="p-6 print:p-3">Estado</th>
                     </tr>
@@ -1544,6 +1547,9 @@ export function Reportes() {
                         </td>
                         <td className="p-6 print:p-3 text-slate-500 text-xs">
                           {d.motivo || "N/A"}
+                        </td>
+                        <td className="p-6 print:p-3 font-mono text-slate-600 text-xs">
+                          {d.usuario || "N/A"}
                         </td>
                         <td className="p-6 print:p-3 font-mono text-slate-600 text-xs">
                           {new Date(d.fecha).toLocaleDateString("es-NI", {
@@ -1573,7 +1579,7 @@ export function Reportes() {
                 <Undo2 className="text-red-600 print:text-red-800" size={28} />{" "}
                 Reporte de Pérdidas
               </h4>
-              <div className="overflow-hidden border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
+              <div className="overflow-x-auto border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 border-b text-[12px] font-black text-slate-400 uppercase tracking-widest">
                     <tr>
@@ -1631,7 +1637,7 @@ export function Reportes() {
                 />{" "}
                 Ventas Filtradas
               </h4>
-              <div className="overflow-hidden border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
+              <div className="overflow-x-auto border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 border-b text-[12px] font-black text-slate-400 uppercase tracking-widest">
                     <tr>
@@ -1679,7 +1685,7 @@ export function Reportes() {
                 />{" "}
                 Top Productos
               </h4>
-              <div className="overflow-hidden border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
+              <div className="overflow-x-auto border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 border-b text-[12px] font-black text-slate-400 uppercase tracking-widest">
                     <tr>
@@ -1727,7 +1733,7 @@ export function Reportes() {
                 />{" "}
                 Ganancia Por Producto
               </h4>
-              <div className="overflow-hidden border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
+              <div className="overflow-x-auto border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 border-b text-[12px] font-black text-slate-400 uppercase tracking-widest">
                     <tr>
@@ -1775,7 +1781,7 @@ export function Reportes() {
                 />{" "}
                 Comparación de Periodos
               </h4>
-              <div className="overflow-hidden border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
+              <div className="overflow-x-auto border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 border-b text-[12px] font-black text-slate-400 uppercase tracking-widest">
                     <tr>
@@ -1832,7 +1838,7 @@ export function Reportes() {
                 />{" "}
                 Compras Filtradas
               </h4>
-              <div className="overflow-hidden border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
+              <div className="overflow-x-auto border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 border-b text-[12px] font-black text-slate-400 uppercase tracking-widest">
                     <tr>
@@ -1882,7 +1888,7 @@ export function Reportes() {
                 />{" "}
                 Productos Sin Movimiento
               </h4>
-              <div className="overflow-hidden border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
+              <div className="overflow-x-auto border border-slate-100 rounded-3xl shadow-sm print:rounded-lg print:border-slate-300 print:overflow-visible">
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 border-b text-[12px] font-black text-slate-400 uppercase tracking-widest">
                     <tr>

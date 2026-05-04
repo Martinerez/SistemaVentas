@@ -369,7 +369,7 @@ export function Pedidos() {
             proveedorId: Number(selectedProveedor),
             usuarioId: userId,
             fechaEntrada: new Date().toISOString(),
-            total,
+            total: Number(total.toFixed(2)),
           },
         );
         fetchEntradas();
@@ -395,7 +395,7 @@ export function Pedidos() {
             entradaInventarioId: entradaId,
             productoId: Number(p.productoId),
             cantidad: Number(p.cantidad),
-            precioCompraUnitario: Number(p.precioUnitario),
+            precioCompraUnitario: Number(p.precioUnitario.toFixed(2)),
           }),
         ),
       );
@@ -535,7 +535,7 @@ export function Pedidos() {
                       <TableCell>
                         {new Date(e.fechaEntrada).toLocaleDateString("en-US")}
                       </TableCell>
-                      <TableCell>C${e.total}</TableCell>
+                      <TableCell>C${Number(e.total).toFixed(2)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
                           <Button
@@ -607,7 +607,7 @@ export function Pedidos() {
                     <TableRow key={d.id}>
                       <TableCell>{d.productoNombre}</TableCell>
                       <TableCell>{d.cantidad}</TableCell>
-                      <TableCell>C${d.precioCompraUnitario}</TableCell>
+                      <TableCell>C${Number(d.precioCompraUnitario).toFixed(2)}</TableCell>
                       <TableCell>C${subtotal.toFixed(2)}</TableCell>
                     </TableRow>
                   );

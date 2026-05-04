@@ -347,8 +347,8 @@ export function Devoluciones() {
                           {estado === "Aceptada" ? "Aprobada" : estado}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        ID: {d.IdUsuario || d.usuarioId}
+                      <TableCell className="text-slate-600 font-medium">
+                        {d.usuarioNombre || `ID: ${d.usuarioId || d.IdUsuario}`}
                       </TableCell>
                     </TableRow>
                   );
@@ -413,6 +413,10 @@ export function Devoluciones() {
                     }`}>
                     {(selectedDevolucion.estado || selectedDevolucion.Estado) === "Aceptada" ? "Aprobada" : (selectedDevolucion.estado || selectedDevolucion.Estado) || "Pendiente"}
                   </span>
+                </div>
+                <div>
+                  <span className="font-semibold text-slate-600 block">Registrado por:</span>
+                  <span className="text-slate-800">{selectedDevolucion.usuarioNombre || "N/A"}</span>
                 </div>
               </div>
 

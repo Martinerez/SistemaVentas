@@ -293,6 +293,7 @@ class SolicitudDevolucionSerializer(serializers.ModelSerializer):
         source='Observaciones', required=False, allow_null=True
     )
     fecha = serializers.DateTimeField(source='Fecha')
+    usuarioNombre = serializers.CharField(source="IdUsuario.Nombre", read_only=True)
     # Anidamiento completo: todos los ítems de la solicitud en una sola respuesta
     detalles = DetalleSolicitudDevolucionSerializer(
         source='detallesolicituddevolucion_set',
@@ -303,6 +304,6 @@ class SolicitudDevolucionSerializer(serializers.ModelSerializer):
     class Meta:
         model = SolicitudDevolucion
         fields = [
-            'id', 'entradaInventarioId', 'usuarioId',
+            'id', 'entradaInventarioId', 'usuarioId', 'usuarioNombre',
             'estado', 'observaciones', 'fecha', 'detalles'
         ]

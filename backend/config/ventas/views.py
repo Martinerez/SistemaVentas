@@ -144,7 +144,12 @@ class ProcesarVentaView(APIView):
                 # Marcar como vendida para que deje de aparecer en el stock disponible
                 inventario.Estado = "Vendido"
                 inventario.save()
-            return Response({"message": "Venta exitosa"}, status=status.HTTP_201_CREATED)
+            return Response({
+                "message": "Venta exitosa",
+                "id": venta.IdVenta,
+                "fecha": venta.Fecha,
+                "total": venta.Total
+            }, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -395,7 +400,14 @@ class ReporteDevolucionesView(APIView):
             return Response({"error": "Faltan fechas de inicio y fin"}, status=400)
         try:
             with connection.cursor() as cursor:
-                cursor.execute("SELECT * FROM devoluciones_por_fecha(%s, %s)", [inicio, fin])
+                # Unimos los resultados de la función con la tabla de Usuarios para obtener el nombre
+                query = """
+                    SELECT r.*, u."Nombre" as usuario
+                    FROM devoluciones_por_fecha(%s, %s) r
+                    LEFT JOIN "SolicitudDevolucion" s ON r.id_solicitud = s."IdSolicitudDevolucion"
+                    LEFT JOIN "Usuario" u ON s."IdUsuario" = u."IdUsuario"
+                """
+                cursor.execute(query, [inicio, fin])
                 columns = [col[0] for col in cursor.description]
                 # Normalización a minúsculas: El frontend accede a d.producto, d.cantidad, etc.
                 result = [{k.lower(): v for k, v in zip(columns, row)} for row in cursor.fetchall()]

@@ -30,7 +30,7 @@
  */
 import {
   Plus, Search, ShoppingCart, Minus, Trash2, Loader2, Receipt,
-  ChevronDown, ChevronRight, Ban, AlertTriangle, X
+  ChevronDown, ChevronRight, Ban, AlertTriangle, X, Download, Printer, CheckCircle
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -47,6 +47,8 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 /**
  * Modal de confirmación de anulación de venta.
@@ -141,6 +143,405 @@ function ConfirmAnularModal({
 }
 
 /**
+ * Función utilitaria para generar y descargar el PDF de una venta (recibo).
+ * Reutilizada tanto al terminar una venta como desde el historial.
+ */
+const downloadSalePDF = (venta: any) => {
+  const doc = new jsPDF({
+    unit: 'mm',
+    format: [80, 180] // Formato ticket estándar 80mm
+  });
+
+  const margin = 5;
+  const pageWidth = 80;
+  const center = pageWidth / 2;
+  let y = 10;
+
+  // Header - Estilo Premium
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(30, 41, 59); // slate-800
+  doc.text("BENDICIÓN DE DIOS", center, y, { align: "center" });
+
+  y += 5;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(100, 116, 139); // slate-500
+  doc.text("De lo recibido de tu mano, te damos.", center, y, { align: "center" });
+
+  y += 4;
+  doc.setFont('helvetica', 'normal');
+  doc.text("Managua, Nicaragua", center, y, { align: "center" });
+
+  y += 7;
+  doc.setDrawColor(203, 213, 225); // slate-300
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, pageWidth - margin, y);
+
+  y += 6;
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(30, 41, 59);
+  doc.text(`FACTURA: #${venta.id}`, margin, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(new Date(venta.fecha || new Date()).toLocaleString(), pageWidth - margin, y, { align: "right" });
+
+  y += 5;
+  // Tabla de productos agrupados
+  const groupedDetails = (venta.detalles || []).reduce((acc: any, d: any) => {
+    const key = d.nombreProducto || "Producto";
+    if (!acc[key]) {
+      acc[key] = { nombre: key, cantidad: 0, precio: Number(d.precioVentaUnitario) };
+    }
+    acc[key].cantidad += d.cantidad || 1;
+    return acc;
+  }, {});
+
+  const tableData = Object.values(groupedDetails).map((g: any) => [
+    g.nombre.toUpperCase(),
+    `x${g.cantidad}`,
+    `C$ ${(g.cantidad * g.precio).toFixed(2)}`
+  ]);
+
+  autoTable(doc, {
+    startY: y,
+    head: [['DESCRIPCIÓN', 'CANT', 'TOTAL']],
+    body: tableData,
+    theme: 'plain',
+    styles: {
+      fontSize: 7,
+      cellPadding: 1,
+      textColor: [51, 65, 85], // slate-700
+      font: 'helvetica'
+    },
+    headStyles: {
+      fontStyle: 'bold',
+      textColor: [15, 23, 42], // slate-900
+      borderBottom: { lineWidth: 0.1, color: [0, 0, 0] }
+    },
+    columnStyles: {
+      0: { cellWidth: 'auto' },
+      1: { halign: 'right', cellWidth: 15 },
+      2: { halign: 'right', cellWidth: 20 }
+    },
+    margin: { left: margin, right: margin },
+  });
+
+  const lastY = (doc as any).lastAutoTable.finalY;
+  y = lastY + 5;
+
+  // Totales con fondo sutil
+  doc.setFillColor(248, 250, 252); // slate-50
+  doc.rect(margin, y, pageWidth - (margin * 2), 15, 'F');
+
+  y += 6;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text("TOTAL A PAGAR:", margin + 2, y);
+  doc.text(`C$ ${Number(venta.total).toLocaleString('es-NI', { minimumFractionDigits: 2 })}`, pageWidth - margin - 2, y, { align: "right" });
+
+  if (venta.pagado) {
+    y += 4;
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text("RECIBIDO:", margin + 2, y);
+    doc.text(`C$ ${Number(venta.pagado).toLocaleString('es-NI', { minimumFractionDigits: 2 })}`, pageWidth - margin - 2, y, { align: "right" });
+
+    y += 3.5;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(22, 163, 74); // green-600
+    doc.text("SU CAMBIO:", margin + 2, y);
+    doc.text(`C$ ${Number(venta.vuelto || 0).toLocaleString('es-NI', { minimumFractionDigits: 2 })}`, pageWidth - margin - 2, y, { align: "right" });
+  }
+
+  y += 15;
+  doc.setFontSize(8);
+  doc.setTextColor(15, 23, 42);
+  doc.setFont('helvetica', 'bold');
+  doc.text("¡MUCHAS GRACIAS POR SU COMPRA!", center, y, { align: "center" });
+
+  y += 4;
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(100, 116, 139);
+  doc.text("Dios le bendiga", center, y, { align: "center" });
+
+  doc.save(`Ticket_Venta_${venta.id}.pdf`);
+};
+
+/**
+ * Estilos para impresión — Oculta todo excepto el recibo cuando se imprime
+ */
+const PrintStyles = () => (
+  <style>
+    {`
+      @media print {
+        body * {
+          visibility: hidden;
+        }
+        #printable-receipt, #printable-receipt * {
+          visibility: visible;
+        }
+        #printable-receipt {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100mm;
+          padding: 5mm;
+          background: white;
+        }
+        .no-print {
+          display: none !important;
+        }
+      }
+    `}
+  </style>
+);
+
+/**
+ * Modal de Pago (Cobro)
+ */
+function PaymentModal({
+  total,
+  onConfirm,
+  onCancel,
+  isLoading
+}: {
+  total: number;
+  onConfirm: (monto: number) => void;
+  onCancel: () => void;
+  isLoading: boolean;
+}) {
+  const [monto, setMonto] = useState("");
+  const vuelto = Number(monto) > total ? Number(monto) - total : 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 overflow-hidden border border-gray-100">
+        <div className="bg-gradient-to-r from-green-600 to-emerald-700 p-6 text-white text-center">
+          <h2 className="text-xl font-bold">Cobrar Venta</h2>
+          <p className="opacity-90">Ingrese la cantidad recibida</p>
+        </div>
+        <div className="p-6 space-y-6">
+          <div className="text-center">
+            <span className="text-sm text-gray-500 uppercase font-bold tracking-wider">Total a Pagar</span>
+            <p className="text-4xl font-black text-slate-800">C$ {total.toFixed(2)}</p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700">Monto Recibido (Efectivo)</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-gray-400">C$</span>
+              <Input
+                type="number"
+                autoFocus
+                placeholder="0.00"
+                className="pl-10 h-12 text-lg font-bold bg-gray-50"
+                value={monto}
+                onChange={(e) => setMonto(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="bg-slate-50 rounded-xl p-4 border border-dashed border-gray-300">
+            <div className="flex justify-between items-center">
+              <span className="font-bold text-gray-600">Cambio (Vuelto)</span>
+              <span className={`text-2xl font-black ${vuelto > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                C$ {vuelto.toFixed(2)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 pb-6 flex gap-3">
+          <Button variant="outline" className="flex-1" onClick={onCancel} disabled={isLoading}>
+            Cancelar
+          </Button>
+          <Button
+            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold"
+            disabled={isLoading || Number(monto) < total}
+            onClick={() => onConfirm(Number(monto))}
+          >
+            {isLoading ? <Loader2 className="animate-spin" /> : "Confirmar"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Modal de Recibo (Resultado Post-Venta)
+ */
+function ReceiptModal({
+  sale,
+  onClose
+}: {
+  sale: any;
+  onClose: () => void;
+}) {
+  const facturaId = sale.id || "N/A";
+  const fechaVenta = sale.fecha ? new Date(sale.fecha).toLocaleString() : new Date().toLocaleString();
+  const totalVenta = Number(sale.total || 0);
+  const pagado = Number(sale.pagado || 0);
+  const vuelto = Number(sale.vuelto || 0);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <PrintStyles />
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm no-print" onClick={onClose} />
+
+      {/* Modal UI */}
+      <div className="relative bg-white rounded-[2.5rem] shadow-2xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in duration-300 no-print border border-slate-100">
+        <button
+          onClick={onClose}
+          className="absolute top-6 right-6 z-10 bg-white/80 backdrop-blur-md hover:bg-white text-slate-400 hover:text-slate-900 size-10 rounded-full flex items-center justify-center transition-all border border-slate-100 shadow-sm active:scale-90"
+        >
+          <X className="size-5" />
+        </button>
+
+        <div className="bg-slate-50 p-10 text-center border-b border-slate-100">
+          <div className="bg-green-500 size-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-200">
+            <CheckCircle className="size-10 text-white" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight">¡Venta Exitosa!</h2>
+          <p className="text-slate-500 font-medium">Comprobante generado correctamente</p>
+        </div>
+
+        <div className="p-8 space-y-6">
+          <div className="relative">
+            <div className="absolute -left-8 -right-8 top-0 h-px bg-dashed bg-slate-200" />
+            <div className="pt-6 space-y-4 font-mono text-sm">
+              <div className="flex justify-between items-center text-slate-400">
+                <span className="uppercase tracking-widest text-[10px] font-bold">No. Factura</span>
+                <span className="font-bold text-slate-900 text-base">#{facturaId}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400">
+                <span className="uppercase tracking-widest text-[10px] font-bold">Fecha y Hora</span>
+                <span className="font-medium text-slate-600 text-xs">{fechaVenta}</span>
+              </div>
+
+              <div className="py-6 border-y border-dashed border-slate-200 my-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400 uppercase tracking-widest text-[10px] font-bold">Total Pagado</span>
+                  <span className="text-3xl font-black text-slate-900 tracking-tighter">
+                    C$ {totalVenta.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+
+              {pagado > 0 && (
+                <div className="space-y-3 pt-2">
+                  <div className="flex justify-between items-center text-slate-500">
+                    <span className="uppercase tracking-widest text-[10px] font-bold">Monto Recibido</span>
+                    <span className="font-bold text-slate-700">C$ {pagado.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-green-600 bg-green-50/50 p-4 rounded-[1.5rem] border border-green-100 shadow-inner">
+                    <span className="font-bold uppercase tracking-widest text-[10px]">Vuelto</span>
+                    <span className="font-black text-2xl tracking-tighter">C$ {vuelto.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <Button
+            className="w-full h-16 rounded-[1.25rem] font-black gap-3 bg-slate-900 hover:bg-slate-800 text-white shadow-xl shadow-slate-200 transition-all active:scale-95 text-base"
+            onClick={() => downloadSalePDF(sale)}
+          >
+            <Download className="size-6" />
+            DESCARGAR RECIBO
+          </Button>
+        </div>
+      </div>
+
+      {/* Ticket Térmico Oculto */}
+      <div id="printable-receipt" className="hidden print:block text-slate-900 font-mono text-[11px] w-[80mm] bg-white p-4">
+        <div className="text-center mb-4">
+          <h1 className="text-lg font-black uppercase tracking-tighter">BENDICIÓN DE DIOS</h1>
+          <div className="text-[10px] space-y-0.5 text-slate-600 italic">
+            <p>De lo recibido de tu mano, te damos.</p>
+            <p>Managua, Nicaragua</p>
+            <p>Telf: +505 8888-8888</p>
+          </div>
+          <div className="my-2 border-b border-double border-slate-900 py-1">
+            <p className="font-bold text-xs">FACTURA DE VENTA</p>
+          </div>
+        </div>
+
+        <div className="mb-4 space-y-1 text-[10px]">
+          <div className="flex justify-between">
+            <span>FACTURA NO:</span>
+            <span className="font-bold">#{facturaId}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>FECHA:</span>
+            <span>{fechaVenta}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>ATENDIDO POR:</span>
+            <span className="uppercase">Cajero General</span>
+          </div>
+        </div>
+
+        <table className="w-full mb-4">
+          <thead>
+            <tr className="border-b-2 border-slate-900 text-left text-[9px]">
+              <th className="pb-1">DESCRIPCIÓN</th>
+              <th className="text-right pb-1">CANT</th>
+              <th className="text-right pb-1">TOTAL</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {Object.values((sale.detalles || []).reduce((acc: any, d: any) => {
+              const key = d.nombreProducto || 'Producto';
+              if (!acc[key]) acc[key] = { nombre: key, cant: 0, precio: Number(d.precioVentaUnitario) };
+              acc[key].cant += d.cantidad || 1;
+              return acc;
+            }, {})).map((g: any, i: number) => (
+              <tr key={i} className="text-[10px]">
+                <td className="py-2 uppercase leading-tight pr-2">{g.nombre}</td>
+                <td className="py-2 text-right">x{g.cant}</td>
+                <td className="py-2 text-right font-bold">C${(g.cant * g.precio).toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div className="space-y-1.5 border-t-2 border-slate-900 pt-3">
+          <div className="flex justify-between font-black text-sm">
+            <span>TOTAL A PAGAR:</span>
+            <span>C$ {totalVenta.toFixed(2)}</span>
+          </div>
+          {pagado > 0 && (
+            <>
+              <div className="flex justify-between text-[10px]">
+                <span>EFECTIVO RECIBIDO:</span>
+                <span>C$ {pagado.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-[10px] italic">
+                <span>SU CAMBIO:</span>
+                <span>C$ {vuelto.toFixed(2)}</span>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="mt-8 text-center space-y-2 border-t border-dashed border-slate-300 pt-4">
+          <p className="font-bold text-[10px]">¡MUCHAS GRACIAS POR SU PREFERENCIA!</p>
+          <p className="text-[9px] italic">"Porque de él, y por él, y para él, son todas las cosas."</p>
+          <p className="font-black text-xs mt-2 uppercase tracking-widest">Dios le bendiga</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+/**
  * Fila expandible del historial de ventas.
  *
  * Implementa el patrón "master-detail" con una fila principal resumida
@@ -174,9 +575,8 @@ function VentaRow({
     <>
       {/* Fila principal */}
       <TableRow
-        className={`cursor-pointer select-none transition-colors hover:bg-gray-50 ${
-          isAnulada ? "opacity-60 bg-red-50/40" : ""
-        }`}
+        className={`cursor-pointer select-none transition-colors hover:bg-gray-50 ${isAnulada ? "opacity-60 bg-red-50/40" : ""
+          }`}
         onClick={() => setExpanded((v) => !v)}
       >
         <TableCell className="w-10">
@@ -193,11 +593,10 @@ function VentaRow({
         <TableCell>{venta.usuarioId}</TableCell>
         <TableCell>
           <span
-            className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${
-              isAnulada
-                ? "bg-red-100 text-red-700"
-                : "bg-emerald-100 text-emerald-700"
-            }`}
+            className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${isAnulada
+              ? "bg-red-100 text-red-700"
+              : "bg-emerald-100 text-emerald-700"
+              }`}
           >
             {isAnulada ? <Ban className="size-3" /> : null}
             {venta.estado ?? "Completada"}
@@ -206,7 +605,7 @@ function VentaRow({
         <TableCell className="text-right font-bold text-green-700">
           C${Number(venta.total).toFixed(2)}
         </TableCell>
-        <TableCell className="text-right">
+        <TableCell className="text-right space-x-2">
           {isAdmin && !isAnulada && (
             <Button
               size="sm"
@@ -221,6 +620,18 @@ function VentaRow({
               Anular
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-blue-500 hover:bg-blue-50 hover:text-blue-700 gap-1.5 font-semibold"
+            onClick={(e) => {
+              e.stopPropagation();
+              downloadSalePDF(venta);
+            }}
+          >
+            <Download className="size-4" />
+            Recibo
+          </Button>
         </TableCell>
       </TableRow>
 
@@ -237,21 +648,30 @@ function VentaRow({
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-gray-500 text-xs uppercase tracking-wide border-b border-gray-200">
+                      <th className="pb-2 pr-4">Cant.</th>
                       <th className="pb-2 pr-4">Producto</th>
                       <th className="pb-2 pr-4 text-right">Precio unitario</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {detalles.map((d: any) => (
+                    {Object.values(detalles.reduce((acc: any, d: any) => {
+                      const key = d.nombreProducto || `Inventario #${d.inventarioId}`;
+                      if (!acc[key]) acc[key] = { nombre: key, cant: 0, precio: d.precioVentaUnitario };
+                      acc[key].cant += 1;
+                      return acc;
+                    }, {})).map((g: any, i: number) => (
                       <tr
-                        key={d.id}
+                        key={i}
                         className="border-b border-gray-100 last:border-0"
                       >
+                        <td className="py-1.5 pr-4 font-bold text-slate-800">
+                          {g.cant}x
+                        </td>
                         <td className="py-1.5 pr-4 font-medium text-slate-700">
-                          {d.nombreProducto ?? `Inventario #${d.inventarioId}`}
+                          {g.nombre}
                         </td>
                         <td className="py-1.5 text-right text-green-700 font-semibold">
-                          C${Number(d.precioVentaUnitario).toFixed(2)}
+                          C${Number(g.precio).toFixed(2)}
                         </td>
                       </tr>
                     ))}
@@ -286,6 +706,10 @@ export function Ventas() {
   // Modal de anulación
   const [ventaAAnular, setVentaAAnular] = useState<any | null>(null);
   const [isAnulando, setIsAnulando] = useState(false);
+
+  // Flujo de Pago y Recibo
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [lastSaleResult, setLastSaleResult] = useState<any | null>(null);
 
   useEffect(() => {
     setSearchTerm("");
@@ -441,7 +865,7 @@ export function Ventas() {
    *   2. Se recarga el inventario (`fetchInventoryForSale()`) para que el
    *      stock en pantalla refleje las unidades recién vendidas.
    */
-  const handleCheckout = async () => {
+  const handleCheckout = async (montoRecibido: number) => {
     if (cart.length === 0) return;
     setIsSubmitting(true);
     try {
@@ -455,13 +879,28 @@ export function Ventas() {
           });
         }
       }
-      await api.post("/ventas/procesar/", {
+      const { data } = await api.post("/ventas/procesar/", {
         usuarioId: userId,
         fecha: new Date().toISOString(),
         total: totalCart,
         detalles,
       });
+
+      // Enriquecer el resultado con datos del pago y carrito para el recibo
+      const saleWithPayment = {
+        ...data,
+        detalles: cart.map(item => ({
+          nombreProducto: item.name,
+          precioVentaUnitario: item.price,
+          cantidad: item.quantity
+        })),
+        pagado: montoRecibido,
+        vuelto: montoRecibido - totalCart
+      };
+
       toast.success("Venta realizada con éxito");
+      setLastSaleResult(saleWithPayment);
+      setIsPaymentModalOpen(false);
       setCart([]);
       fetchInventoryForSale();
     } catch (error: any) {
@@ -500,6 +939,23 @@ export function Ventas() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Modales de Flujo de Venta */}
+      {isPaymentModalOpen && (
+        <PaymentModal
+          total={totalCart}
+          onConfirm={handleCheckout}
+          onCancel={() => setIsPaymentModalOpen(false)}
+          isLoading={isSubmitting}
+        />
+      )}
+
+      {lastSaleResult && (
+        <ReceiptModal
+          sale={lastSaleResult}
+          onClose={() => setLastSaleResult(null)}
+        />
+      )}
+
       {/* Modal de confirmación */}
       {ventaAAnular && (
         <ConfirmAnularModal
@@ -520,21 +976,19 @@ export function Ventas() {
         </div>
         <div className="flex gap-4 border-b">
           <button
-            className={`pb-2 px-4 text-sm font-semibold transition-colors ${
-              activeTab === "pos"
-                ? "border-b-2 border-green-600 text-green-700"
-                : "text-gray-500 hover:text-slate-700"
-            }`}
+            className={`pb-2 px-4 text-sm font-semibold transition-colors ${activeTab === "pos"
+              ? "border-b-2 border-green-600 text-green-700"
+              : "text-gray-500 hover:text-slate-700"
+              }`}
             onClick={() => setActiveTab("pos")}
           >
             Punto de Venta
           </button>
           <button
-            className={`pb-2 px-4 text-sm font-semibold transition-colors ${
-              activeTab === "historial"
-                ? "border-b-2 border-green-600 text-green-700"
-                : "text-gray-500 hover:text-slate-700"
-            }`}
+            className={`pb-2 px-4 text-sm font-semibold transition-colors ${activeTab === "historial"
+              ? "border-b-2 border-green-600 text-green-700"
+              : "text-gray-500 hover:text-slate-700"
+              }`}
             onClick={() => setActiveTab("historial")}
           >
             Historial
@@ -662,7 +1116,7 @@ export function Ventas() {
                   </span>
                 </div>
                 <Button
-                  onClick={handleCheckout}
+                  onClick={() => setIsPaymentModalOpen(true)}
                   disabled={cart.length === 0 || isSubmitting}
                   className="w-full h-14 text-lg font-bold bg-green-600 hover:bg-green-700 text-white shadow-lg transition-all"
                 >

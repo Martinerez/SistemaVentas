@@ -132,33 +132,7 @@ class DetalleEntradaInventarioViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(IdEntradaInventario_id=entrada_id)
         return queryset
 
-    @transaction.atomic
-    def perform_create(self, serializer):
-        """
-        Crea un detalle de entrada Y sus registros de inventario de forma atómica.
 
-        POR QUÉ bulk_create():
-            Para N unidades, bulk_create() genera UN SOLO INSERT SQL en lugar
-            de N inserts individuales. Esto es significativamente más rápido
-            para compras de lotes grandes (ej: 100 unidades de agua).
-
-        Args:
-            serializer: Serializador ya validado de DRF.
-        """
-        detalle = serializer.save()
-
-        # Construir la lista de objetos Inventario en memoria antes de insertarlos
-        inventarios = [
-            Inventario(
-                IdDetalleEntrada=detalle,
-                Estado="Disponible",
-                FechaMovimiento=timezone.now()
-            )
-            for _ in range(detalle.Cantidad)  # Una unidad por cada item del lote
-        ]
-
-        # Un solo INSERT con todas las unidades
-        Inventario.objects.bulk_create(inventarios)
 
 
 class InventarioViewSet(viewsets.ModelViewSet):

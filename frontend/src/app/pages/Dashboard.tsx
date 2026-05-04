@@ -36,13 +36,14 @@ import { useState, useEffect } from "react";
 import api from "../api/axiosInstance";
 import { useAuth } from "../contexts/AuthContext";
 import {
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Cell,
 } from "recharts";
 
 /**
@@ -154,7 +155,7 @@ export function Dashboard() {
           Panel de Control General
         </h1>
         <p className="text-gray-600">
-          Resumen y estado de tu negocio al día de hoy
+          Resumen y estado del negocio al día de hoy
         </p>
       </div>
 
@@ -181,9 +182,8 @@ export function Dashboard() {
                   <Icon className="size-6 text-white" />
                 </div>
                 <div
-                  className={`flex items-center gap-1 text-sm font-semibold ${
-                    stat.trend === "up" ? "text-green-600" : "text-red-400"
-                  }`}
+                  className={`flex items-center gap-1 text-sm font-semibold ${stat.trend === "up" ? "text-green-600" : "text-red-400"
+                    }`}
                 >
                   {stat.trend === "up" ? (
                     <ArrowUpRight className="size-4" />
@@ -212,9 +212,9 @@ export function Dashboard() {
         </div>
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart
+            <BarChart
               data={chartData}
-              margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
+              margin={{ top: 10, right: 20, bottom: 5, left: 0 }}
             >
               <CartesianGrid
                 strokeDasharray="3 3"
@@ -227,6 +227,13 @@ export function Dashboard() {
                 tickLine={false}
                 tick={{ fill: "#6B7280", fontSize: 12 }}
                 dy={10}
+                tickFormatter={(value) => {
+                  const dayMap: { [key: string]: string } = {
+                    Mon: "Lun", Tue: "Mar", Wed: "Mié", Thu: "Jue", 
+                    Fri: "Vie", Sat: "Sáb", Sun: "Dom", Hoy: "Hoy"
+                  };
+                  return dayMap[value] || value;
+                }}
               />
               <YAxis
                 axisLine={false}
@@ -236,29 +243,42 @@ export function Dashboard() {
                 tickFormatter={(value) => `C$ ${value}`}
               />
               <Tooltip
+                labelFormatter={(value) => {
+                  const dayMap: { [key: string]: string } = {
+                    Mon: "Lunes", Tue: "Martes", Wed: "Miércoles", Thu: "Jueves",
+                    Fri: "Viernes", Sat: "Sábado", Sun: "Domingo", Hoy: "Hoy"
+                  };
+                  return dayMap[value] || value;
+                }}
                 contentStyle={{
-                  borderRadius: "8px",
+                  borderRadius: "12px",
                   border: "none",
-                  boxShadow:
-                    "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+                  boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+                  padding: "12px",
                 }}
-                itemStyle={{ color: "#166534", fontWeight: "bold" }}
-                cursor={{
-                  stroke: "#16a34a",
-                  strokeWidth: 1,
-                  strokeDasharray: "3 3",
-                }}
+                cursor={{ fill: "#f1f5f9", radius: 8 }}
+                formatter={(value: any) => [`C$ ${Number(value).toLocaleString()}`, "Ventas"]}
               />
-              <Line
-                type="monotone"
+              <Bar
                 dataKey="total"
-                stroke="#16a34a"
-                strokeWidth={3}
-                dot={{ r: 4, fill: "#16a34a", strokeWidth: 2, stroke: "#fff" }}
-                activeDot={{ r: 6, strokeWidth: 0 }}
+                radius={[6, 6, 0, 0]}
+                barSize={40}
                 name="Ventas (C$)"
-              />
-            </LineChart>
+              >
+                {chartData.map((entry: any, index: number) => {
+                  // Paleta de colores vibrantes y profesionales
+                  const colors = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#06b6d4", "#f43f5e"];
+                  return (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={colors[index % colors.length]}
+                      fillOpacity={0.8}
+                      className="hover:fill-opacity-100 transition-all duration-300"
+                    />
+                  );
+                })}
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </Card>
@@ -276,7 +296,7 @@ export function Dashboard() {
                   Productos con Stock Bajo
                 </h3>
                 <p className="text-sm text-gray-500">
-                  Requieren reabastecimiento urgente ({"< 10"} unidades)
+                  Requieren reabastecimiento urgente
                 </p>
               </div>
             </div>
@@ -351,7 +371,7 @@ export function Dashboard() {
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-sm text-green-700">
-                      {String(sale.total).replace("$", "C$ ")}
+                      {`C$ ${Number(String(sale.total).replace(/[^0-9.-]+/g, "")).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                     </p>
                     <p className="text-xs text-gray-500">{sale.items} items</p>
                   </div>

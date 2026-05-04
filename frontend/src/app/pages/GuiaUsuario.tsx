@@ -97,7 +97,7 @@ const datosManual: Seccion[] = [
   },
   {
     id: 'perdidas',
-    titulo: 'Control de Mermas',
+    titulo: 'Control de pérdidas',
     descripcion: 'Registro de productos dañados o caducados.',
     icono: <Iconos.Perdidas />,
     detalles: [
@@ -277,12 +277,12 @@ export function GuiaUsuario(): React.JSX.Element {
 
       <div className="acordeon-container">
         {datosManual.map((seccion) => (
-          <div 
-            key={seccion.id} 
+          <div
+            key={seccion.id}
             className={`acordeon-item ${seccionAbierta === seccion.id ? 'activo' : ''}`}
           >
-            <button 
-              className="acordeon-header" 
+            <button
+              className="acordeon-header"
               onClick={() => toggleSeccion(seccion.id)}
               aria-expanded={seccionAbierta === seccion.id}
             >
@@ -301,7 +301,7 @@ export function GuiaUsuario(): React.JSX.Element {
                 </svg>
               </div>
             </button>
-            
+
             <div className="acordeon-contenido">
               <div className="contenido-interno">
                 <ul className="lista-detalles">

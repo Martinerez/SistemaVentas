@@ -322,32 +322,30 @@ def crear_items_inventario(sender, instance, created, **kwargs):
     """
     Signal Django que crea registros de Inventario al guardar un DetalleEntradaInventario.
 
-    POR QUÉ USAR UNA SIGNAL EN LUGAR DE LÓGICA EN LA VISTA:
+    POR QUÉ USAR UNA SIGNAL:
         La signal garantiza que la creación de unidades de inventario ocurra
         SIEMPRE que se guarde un DetalleEntradaInventario, independientemente
         de qué parte del código lo crea (la vista API, el panel de admin de
-        Django, scripts de importación, etc.). Centraliza esta lógica y
-        la hace imposible de omitir accidentalmente.
+        Django, scripts de importación, etc.).
 
-        NOTA: La vista DetalleEntradaInventarioViewSet también tiene una lógica
-        de bulk_create en perform_create(). Esto crea una duplicación que debe
-        resolverse eliminando la lógica de la vista para evitar que se creen
-        el doble de unidades de inventario.
+    POR QUÉ bulk_create():
+        Se usa bulk_create para insertar todas las unidades en una sola operación
+        SQL, lo cual es mucho más eficiente que un bucle de inserts individuales.
 
     Args:
         sender (Model): Clase que envió la signal (DetalleEntradaInventario).
         instance (DetalleEntradaInventario): Instancia recién guardada.
-        created (bool): True solo en la primera creación, False en actualizaciones.
-        **kwargs: Argumentos adicionales de Django.
+        created (bool): True solo en la primera creación.
     """
-    # La condición `if created` es CRÍTICA: evita que se creen unidades
-    # duplicadas cuando un detalle existente se actualiza (ej: cambio de precio).
     if created:
-        # Crear N registros de Inventario donde N = Cantidad del detalle.
-        # Cada registro representa una unidad física individual en el almacén.
-        for _ in range(instance.Cantidad):
-            Inventario.objects.create(
+        # Crear la lista de objetos en memoria
+        inventarios = [
+            Inventario(
                 IdDetalleEntrada=instance,
                 Estado='Disponible',
                 FechaMovimiento=timezone.now()
             )
+            for _ in range(instance.Cantidad)
+        ]
+        # Insertar todos de una vez
+        Inventario.objects.bulk_create(inventarios)
