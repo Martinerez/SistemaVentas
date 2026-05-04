@@ -523,7 +523,7 @@ function ReceiptModal({
                 <span>C$ {pagado.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-[10px] italic">
-                <span>SU CAMBIO:</span>
+                <span>CAMBIO:</span>
                 <span>C$ {vuelto.toFixed(2)}</span>
               </div>
             </>
