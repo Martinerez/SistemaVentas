@@ -127,7 +127,7 @@ export function Dashboard() {
     },
     {
       icon: TrendingDown,
-      label: "Pérdidas del Mes",
+      label: "Pérdidas de la semana",
       value: statsData?.weeklyLosses != null ? `C$ ${Number(statsData.weeklyLosses).toFixed(2)}` : '—',
       change: "Últimos 7 días",
       trend: "down",
@@ -229,7 +229,7 @@ export function Dashboard() {
                 dy={10}
                 tickFormatter={(value) => {
                   const dayMap: { [key: string]: string } = {
-                    Mon: "Lun", Tue: "Mar", Wed: "Mié", Thu: "Jue", 
+                    Mon: "Lun", Tue: "Mar", Wed: "Mié", Thu: "Jue",
                     Fri: "Vie", Sat: "Sáb", Sun: "Dom", Hoy: "Hoy"
                   };
                   return dayMap[value] || value;
