@@ -268,6 +268,33 @@ export function GuiaUsuario(): React.JSX.Element {
         .lista-detalles li:last-child {
           margin-bottom: 0;
         }
+
+        /* Dark Mode Support */
+        .dark .manual-header h1,
+        .dark .textos-header h3 {
+          color: #f8fafc;
+        }
+        
+        .dark .manual-header p,
+        .dark .textos-header p,
+        .dark .lista-detalles li {
+          color: #94a3b8;
+        }
+
+        .dark .acordeon-item,
+        .dark .acordeon-contenido {
+          background-color: #1e293b;
+          border-color: #334155;
+        }
+
+        .dark .acordeon-header:hover {
+          background-color: #0f172a;
+        }
+
+        .dark .icono-contenedor {
+          background-color: #1e3a8a;
+          color: #60a5fa;
+        }
       `}</style>
 
       <div className="manual-header">

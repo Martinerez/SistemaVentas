@@ -315,20 +315,20 @@ export function Productos() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Productos</h1>
-          <p className="text-gray-600">Gestiona tu catálogo de productos</p>
+          <h1 className="text-2xl font-bold text-foreground">Productos</h1>
+          <p className="text-muted-foreground">Gestiona tu catálogo de productos</p>
         </div>
         <div className="flex gap-3">
           <Button
             onClick={() => setIsAddCategoryOpen(true)}
-            className="bg-gradient-to-r from-blue-800 to-slate-900 hover:from-blue-900 hover:to-slate-950"
+            className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white shadow-md dark:from-blue-500 dark:to-blue-700"
           >
             <Plus className="size-4 mr-2" />
             Agregar Categoría
           </Button>
           <Button
             onClick={() => setIsAddProductOpen(true)}
-            className="bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-800 hover:to-slate-950"
+            className="bg-gradient-to-r from-slate-600 to-slate-800 hover:from-slate-700 hover:to-slate-900 text-white shadow-md dark:from-slate-500 dark:to-slate-700"
           >
             <Plus className="size-4 mr-2" />
             Agregar Producto
@@ -355,7 +355,7 @@ export function Productos() {
         <div>
           <Card className="p-6 mb-6 border-0 shadow-lg">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-slate-800">Categorías</h2>
+              <h2 className="text-xl font-bold text-foreground">Categorías</h2>
               <div className="relative flex-1 max-w-md ml-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
                 <Input
@@ -383,21 +383,21 @@ export function Productos() {
                     <div className="size-12 bg-gradient-to-br from-slate-600 to-slate-800 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                       <Package className="size-6 text-white" />
                     </div>
-                    <span className="px-3 py-1 bg-gradient-to-r from-slate-100 to-gray-200 text-slate-800 rounded-full text-sm font-bold">
+                    <span className="px-3 py-1 bg-gradient-to-r from-slate-100 to-gray-200 text-foreground rounded-full text-sm font-bold">
                       {category.productCount}
                     </span>
                   </div>
-                  <h3 className="text-lg font-bold text-slate-800 mb-1">
+                  <h3 className="text-lg font-bold text-foreground mb-1">
                     {category.name}
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     {category.productCount}{" "}
                     {category.productCount === 1 ? "producto" : "productos"}
                   </p>
                 </Card>
               ))
             ) : (
-              <p className="col-span-full text-center text-gray-500">
+              <p className="col-span-full text-center text-muted-foreground">
                 No se encontraron categorías
               </p>
             )}
@@ -408,10 +408,10 @@ export function Productos() {
           {/* Header de la categoría */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-slate-800">
+              <h2 className="text-2xl font-bold text-foreground">
                 {selectedCategoryData?.name}
               </h2>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 {filteredProducts.length} productos en esta categoría
               </p>
             </div>
@@ -432,7 +432,7 @@ export function Productos() {
               <Button
                 variant="outline"
                 onClick={handleDeleteCategoryClick}
-                className="bg-white border-red-500 text-red-500 hover:bg-red-50"
+                className="bg-card border-red-500 text-red-500 hover:bg-red-50"
               >
                 <Trash2 className="size-4 mr-2" />
               </Button>
@@ -465,8 +465,8 @@ export function Productos() {
               <TableBody>
                 {searchedProducts.length > 0 ? (
                   searchedProducts.map((product) => (
-                    <TableRow key={product.id} className="hover:bg-gray-50">
-                      <TableCell className="font-medium text-slate-800">
+                    <TableRow key={product.id} className="hover:bg-muted">
+                      <TableCell className="font-medium text-foreground">
                         {product.name}
                       </TableCell>
                       <TableCell>
@@ -483,7 +483,7 @@ export function Productos() {
                           {product.stock === 1 ? "unidad" : "unidades"}
                         </span>
                       </TableCell>
-                      <TableCell className="font-semibold text-slate-800">
+                      <TableCell className="font-semibold text-foreground">
                         C${product.salePrice.toFixed(2)}
                       </TableCell>
                       <TableCell className="text-right">
@@ -510,7 +510,7 @@ export function Productos() {
                   <TableRow>
                     <TableCell
                       colSpan={4}
-                      className="text-center py-8 text-gray-500"
+                      className="text-center py-8 text-muted-foreground"
                     >
                       No se encontraron productos que coincidan con "
                       {searchTerm}"
@@ -527,13 +527,13 @@ export function Productos() {
       <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-800">
+            <DialogTitle className="text-xl font-bold text-foreground">
               Agregar Producto
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label className="text-slate-800 font-semibold">
+              <Label className="text-foreground font-semibold">
                 Nombre del Producto
               </Label>
               <Input
@@ -544,7 +544,7 @@ export function Productos() {
               />
             </div>
             <div>
-              <Label className="text-slate-800 font-semibold">Categoría</Label>
+              <Label className="text-foreground font-semibold">Categoría</Label>
               <Select
                 value={newProductCategory}
                 onValueChange={setNewProductCategory}
@@ -563,7 +563,7 @@ export function Productos() {
             </div>
             <Button
               onClick={handleAddProduct}
-              className="w-full bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-800 hover:to-slate-950"
+              className="w-full bg-gradient-to-r from-slate-600 to-slate-800 hover:from-slate-700 hover:to-slate-900 text-white shadow-md dark:from-slate-500 dark:to-slate-700"
             >
               Aceptar
             </Button>
@@ -575,13 +575,13 @@ export function Productos() {
       <Dialog open={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-800">
+            <DialogTitle className="text-xl font-bold text-foreground">
               Agregar Categoría
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label className="text-slate-800 font-semibold">
+              <Label className="text-foreground font-semibold">
                 Nombre de la Categoría
               </Label>
               <Input
@@ -592,7 +592,7 @@ export function Productos() {
               />
             </div>
             <div>
-              <Label className="text-slate-800 font-semibold">
+              <Label className="text-foreground font-semibold">
                 Porcentaje de Ganancia
               </Label>
               <div className="flex items-center gap-2 mt-2">
@@ -604,12 +604,12 @@ export function Productos() {
                   placeholder="3"
                   className="flex-1"
                 />
-                <span className="text-slate-800 font-semibold text-lg">%</span>
+                <span className="text-foreground font-semibold text-lg">%</span>
               </div>
             </div>
             <Button
               onClick={handleAddCategory}
-              className="w-full bg-gradient-to-r from-blue-800 to-slate-900 hover:from-blue-900 hover:to-slate-950"
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white shadow-md dark:from-blue-500 dark:to-blue-700"
             >
               Aceptar
             </Button>
@@ -621,13 +621,13 @@ export function Productos() {
       <Dialog open={isEditProductOpen} onOpenChange={setIsEditProductOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-800">
+            <DialogTitle className="text-xl font-bold text-foreground">
               Editar Producto
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label className="text-slate-800 font-semibold">
+              <Label className="text-foreground font-semibold">
                 Nombre del Producto
               </Label>
               <Input
@@ -640,7 +640,7 @@ export function Productos() {
               />
             </div>
             <div>
-              <Label className="text-slate-800 font-semibold">Categoría</Label>
+              <Label className="text-foreground font-semibold">Categoría</Label>
               <Select
                 value={editingProduct?.categoryId?.toString() || ""}
                 onValueChange={(value) =>
@@ -673,24 +673,24 @@ export function Productos() {
       <Dialog open={isViewCategoryOpen} onOpenChange={setIsViewCategoryOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-800">
+            <DialogTitle className="text-xl font-bold text-foreground">
               Categoría
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div>
-              <Label className="text-slate-800 font-semibold">
+              <Label className="text-foreground font-semibold">
                 Nombre de la Categoría
               </Label>
-              <p className="mt-2 text-gray-700">{viewingCategory?.name}</p>
+              <p className="mt-2 text-foreground">{viewingCategory?.name}</p>
             </div>
 
             <div>
-              <Label className="text-slate-800 font-semibold">
+              <Label className="text-foreground font-semibold">
                 Porcentaje de Ganancia
               </Label>
-              <p className="mt-2 text-gray-700">
+              <p className="mt-2 text-foreground">
                 {viewingCategory?.profitPercentage}%
               </p>
             </div>
@@ -702,13 +702,13 @@ export function Productos() {
       <Dialog open={isEditCategoryOpen} onOpenChange={setIsEditCategoryOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-800">
+            <DialogTitle className="text-xl font-bold text-foreground">
               Editar Categoría
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label className="text-slate-800 font-semibold">
+              <Label className="text-foreground font-semibold">
                 Nombre de la Categoría
               </Label>
               <Input
@@ -724,7 +724,7 @@ export function Productos() {
               />
             </div>
             <div>
-              <Label className="text-slate-800 font-semibold">
+              <Label className="text-foreground font-semibold">
                 Porcentaje de Ganancia
               </Label>
               <div className="flex items-center gap-2 mt-2">
@@ -741,7 +741,7 @@ export function Productos() {
                   placeholder="3"
                   className="flex-1"
                 />
-                <span className="text-slate-800 font-semibold text-lg">%</span>
+                <span className="text-foreground font-semibold text-lg">%</span>
               </div>
             </div>
             <Button
@@ -763,7 +763,7 @@ export function Productos() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-bold text-slate-800">
+            <AlertDialogTitle className="text-xl font-bold text-foreground">
               {deleteAlert.hasStock ? "No se puede eliminar" : "¿Está seguro?"}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-base">
@@ -778,7 +778,7 @@ export function Productos() {
                 onClick={() =>
                   setDeleteAlert({ ...deleteAlert, isOpen: false })
                 }
-                className="bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-800 hover:to-slate-950"
+                className="bg-gradient-to-r from-slate-600 to-slate-800 hover:from-slate-700 hover:to-slate-900 text-white shadow-md dark:from-slate-500 dark:to-slate-700"
               >
                 Entendido
               </AlertDialogAction>
@@ -809,7 +809,7 @@ export function Productos() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-bold text-slate-800">
+            <AlertDialogTitle className="text-xl font-bold text-foreground">
               {deleteCategoryAlert.hasProducts
                 ? "No se puede eliminar"
                 : "¿Está seguro?"}
@@ -829,7 +829,7 @@ export function Productos() {
                     isOpen: false,
                   })
                 }
-                className="bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-800 hover:to-slate-950"
+                className="bg-gradient-to-r from-slate-700 to-slate-900 dark:from-slate-500 dark:to-slate-700 hover:from-slate-800 hover:to-slate-950"
               >
                 Entendido
               </AlertDialogAction>

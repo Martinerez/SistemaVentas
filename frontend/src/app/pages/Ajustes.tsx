@@ -160,7 +160,7 @@ export function Ajustes() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold text-slate-800 dark:text-white">
+      <h1 className="text-2xl font-bold text-foreground dark:text-white">
         Ajustes
       </h1>
 
@@ -172,27 +172,27 @@ export function Ajustes() {
         
         {isLoadingData ? (
           <div className="flex justify-center items-center p-6">
-            <Loader2 className="animate-spin text-slate-500" />
+            <Loader2 className="animate-spin text-muted-foreground" />
           </div>
         ) : userData ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label className="text-slate-500 dark:text-slate-400">Correo</Label>
-              <p className="font-medium text-slate-900 dark:text-slate-100 mt-1">
+              <Label className="text-muted-foreground dark:text-slate-400">Correo</Label>
+              <p className="font-medium text-foreground dark:text-slate-100 mt-1">
                 {userData.email || "No especificado"}
               </p>
             </div>
 
             <div>
-              <Label className="text-slate-500 dark:text-slate-400">Rol</Label>
-              <p className="font-medium text-slate-900 dark:text-slate-100 mt-1 capitalize">
+              <Label className="text-muted-foreground dark:text-slate-400">Rol</Label>
+              <p className="font-medium text-foreground dark:text-slate-100 mt-1 capitalize">
                 {/* Ajusta este campo según como retorne el rol tu backend de Django (ej: userData.rol, userData.groups[0]?.name, etc) */}
                 {userData.rol || userData.role || (userData.is_superuser ? "Administrador" : "Vendedor") || "No especificado"}
               </p>
             </div>
           </div>
         ) : (
-          <p className="text-slate-500 text-sm">No se encontró información del usuario.</p>
+          <p className="text-muted-foreground text-sm">No se encontró información del usuario.</p>
         )}
       </Card>
 
@@ -213,7 +213,7 @@ export function Ajustes() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground dark:text-slate-400 dark:hover:text-slate-200"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>

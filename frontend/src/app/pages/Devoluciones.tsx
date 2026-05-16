@@ -262,16 +262,16 @@ export function Devoluciones() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">
+          <h1 className="text-2xl font-bold text-foreground">
             Devoluciones a Proveedores
           </h1>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Gestión de productos defectuosos sujetos a devolución
           </p>
         </div>
         <Button
           onClick={() => setIsAddOpen(true)}
-          className="bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-800 hover:to-slate-950 text-white shadow-md"
+          className="bg-gradient-to-r from-slate-700 to-slate-900 dark:from-slate-500 dark:to-slate-700 hover:from-slate-800 hover:to-slate-950 text-white shadow-md"
         >
           <Plus className="size-4 mr-2" />
           Nueva Solicitud
@@ -314,10 +314,10 @@ export function Devoluciones() {
                   return (
                     <TableRow
                       key={idSol}
-                      className="hover:bg-slate-50 transition-colors cursor-pointer"
+                      className="hover:bg-muted transition-colors cursor-pointer"
                       onClick={() => handleViewDetails(d)}
                     >
-                      <TableCell className="font-medium text-slate-800">
+                      <TableCell className="font-medium text-foreground">
                         #{idSol?.toString().padStart(4, "0")}
                       </TableCell>
                       <TableCell className="max-w-[150px] truncate" title={primerDetalle?.productoNombre}>
@@ -330,7 +330,7 @@ export function Devoluciones() {
                         {primerDetalle?.motivoRechazo || "Sin motivo"}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2 text-slate-600">
+                        <div className="flex items-center gap-2 text-muted-foreground">
                           <Calendar className="size-4" />
                           {new Date(d.fecha || d.Fecha).toLocaleDateString("es-ES")}
                         </div>
@@ -347,7 +347,7 @@ export function Devoluciones() {
                           {estado === "Aceptada" ? "Aprobada" : estado}
                         </span>
                       </TableCell>
-                      <TableCell className="text-slate-600 font-medium">
+                      <TableCell className="text-muted-foreground font-medium">
                         {d.usuarioNombre || `ID: ${d.usuarioId || d.IdUsuario}`}
                       </TableCell>
                     </TableRow>
@@ -357,7 +357,7 @@ export function Devoluciones() {
                 <TableRow>
                   <TableCell
                     colSpan={7}
-                    className="text-center py-8 text-gray-500"
+                    className="text-center py-8 text-muted-foreground"
                   >
                     No se encontraron registros de devoluciones.
                   </TableCell>
@@ -372,7 +372,7 @@ export function Devoluciones() {
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-slate-800">
+            <DialogTitle className="flex items-center gap-2 text-foreground">
               <Eye className="size-5" />
               Detalle de Devolución
             </DialogTitle>
@@ -384,27 +384,27 @@ export function Devoluciones() {
             <div className="space-y-4 pt-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-semibold text-slate-600 block">Producto:</span>
-                  <span className="text-slate-800">{selectedDevolucion.detalles?.[0]?.productoNombre || "N/A"}</span>
+                  <span className="font-semibold text-muted-foreground block">Producto:</span>
+                  <span className="text-foreground">{selectedDevolucion.detalles?.[0]?.productoNombre || "N/A"}</span>
                 </div>
                 <div>
-                  <span className="font-semibold text-slate-600 block">Cantidad:</span>
-                  <span className="text-slate-800">{selectedDevolucion.detalles?.length || 0}</span>
+                  <span className="font-semibold text-muted-foreground block">Cantidad:</span>
+                  <span className="text-foreground">{selectedDevolucion.detalles?.length || 0}</span>
                 </div>
                 <div className="col-span-2">
-                  <span className="font-semibold text-slate-600 block">Motivo de solicitud:</span>
-                  <p className="text-slate-800 bg-slate-50 p-2 rounded border mt-1">
+                  <span className="font-semibold text-muted-foreground block">Motivo de solicitud:</span>
+                  <p className="text-foreground bg-muted p-2 rounded border mt-1">
                     {selectedDevolucion.detalles?.[0]?.motivoRechazo || "Sin motivo registrado"}
                   </p>
                 </div>
                 <div>
-                  <span className="font-semibold text-slate-600 block">Fecha de Solicitud:</span>
-                  <span className="text-slate-800">
+                  <span className="font-semibold text-muted-foreground block">Fecha de Solicitud:</span>
+                  <span className="text-foreground">
                     {new Date(selectedDevolucion.fecha || selectedDevolucion.Fecha).toLocaleString("es-ES")}
                   </span>
                 </div>
                 <div>
-                  <span className="font-semibold text-slate-600 block">Estado Actual:</span>
+                  <span className="font-semibold text-muted-foreground block">Estado Actual:</span>
                   <span className={`px-2 py-1 mt-1 inline-block text-xs rounded-full font-semibold ${(selectedDevolucion.estado || selectedDevolucion.Estado) === "Aceptada" || (selectedDevolucion.estado || selectedDevolucion.Estado) === "Aprobada"
                     ? "bg-green-100 text-green-800"
                     : (selectedDevolucion.estado || selectedDevolucion.Estado) === "Rechazada"
@@ -415,8 +415,8 @@ export function Devoluciones() {
                   </span>
                 </div>
                 <div>
-                  <span className="font-semibold text-slate-600 block">Registrado por:</span>
-                  <span className="text-slate-800">{selectedDevolucion.usuarioNombre || "N/A"}</span>
+                  <span className="font-semibold text-muted-foreground block">Registrado por:</span>
+                  <span className="text-foreground">{selectedDevolucion.usuarioNombre || "N/A"}</span>
                 </div>
               </div>
 
@@ -441,7 +441,7 @@ export function Devoluciones() {
                   </Button>
                 </div>
               ) : (
-                <div className="bg-slate-50 border p-3 rounded-md mt-6 text-center text-sm text-slate-500">
+                <div className="bg-muted border p-3 rounded-md mt-6 text-center text-sm text-muted-foreground">
                   Esta devolución ya fue procesada y no puede ser modificada.
                 </div>
               )}
@@ -453,7 +453,7 @@ export function Devoluciones() {
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-slate-800">
+            <DialogTitle className="flex items-center gap-2 text-foreground">
               <CornerDownLeft className="size-5" />
               Solicitar Devolución
             </DialogTitle>
@@ -491,7 +491,7 @@ export function Devoluciones() {
                     </SelectItem>
                   ))}
                   {getAvailableGroups().length === 0 && (
-                    <div className="p-2 text-sm text-gray-500 text-center">
+                    <div className="p-2 text-sm text-muted-foreground text-center">
                       No hay productos disponibles para devolver.
                     </div>
                   )}
@@ -519,7 +519,7 @@ export function Devoluciones() {
                 value={motivo}
                 onChange={(e) => setMotivo(e.target.value)}
               />
-              <p className="text-xs text-slate-500 text-right">
+              <p className="text-xs text-muted-foreground text-right">
                 {motivo.length}/15 min.
               </p>
             </div>
@@ -542,7 +542,7 @@ export function Devoluciones() {
                   isSubmitting || !selectedGroupKey || motivo.length < 15 || cantidadADevolver < 1
                 }
                 onClick={handleSave}
-                className="bg-slate-800 hover:bg-slate-900 text-white"
+                className="bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-700 dark:hover:bg-slate-600"
               >
                 {isSubmitting ? (
                   <Loader2 className="animate-spin size-4 mr-2" />

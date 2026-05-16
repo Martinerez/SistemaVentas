@@ -147,10 +147,10 @@ export function GestionUsuarios() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Gestión de Usuarios</h1>
-          <p className="text-gray-600">Administra el acceso al sistema</p>
+          <h1 className="text-2xl font-bold text-foreground">Gestión de Usuarios</h1>
+          <p className="text-muted-foreground">Administra el acceso al sistema</p>
         </div>
-        <Button onClick={handleOpenAdd} className="bg-gradient-to-r from-slate-700 to-slate-900 hover:from-slate-800 hover:to-slate-950">
+        <Button onClick={handleOpenAdd} className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white shadow-md dark:from-blue-500 dark:to-blue-700">
           <Plus className="size-4 mr-2" /> Agregar Usuario
         </Button>
       </div>
@@ -177,12 +177,12 @@ export function GestionUsuarios() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <div className="size-8 bg-slate-100 rounded-full flex items-center justify-center">
-                        {u.rol === "admin" ? <ShieldCheck className="size-4 text-slate-700" /> : <User className="size-4 text-slate-500" />}
+                        {u.rol === "admin" ? <ShieldCheck className="size-4 text-foreground" /> : <User className="size-4 text-muted-foreground" />}
                       </div>
-                      <span className="font-medium text-slate-800">{u.nombre}</span>
+                      <span className="font-medium text-foreground">{u.nombre}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-slate-600">{u.email}</TableCell>
+                  <TableCell className="text-muted-foreground">{u.email}</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 text-xs rounded-full font-semibold capitalize ${u.rol === 'admin' ? 'bg-slate-800 text-white' : 'bg-blue-100 text-blue-800'}`}>
                       {u.rol === "admin" ? "Administrador" : "Vendedor"}
@@ -194,12 +194,12 @@ export function GestionUsuarios() {
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(u)}><Pencil className="size-4 text-slate-600" /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(u)}><Pencil className="size-4 text-muted-foreground" /></Button>
                     <Button variant="ghost" size="sm" onClick={() => handleDelete(u.id, u.nombre)}><Trash2 className="size-4 text-red-500" /></Button>
                   </TableCell>
                 </TableRow>
               )) : (
-                <TableRow><TableCell colSpan={5} className="text-center py-10 text-gray-500">No se encontraron usuarios.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">No se encontraron usuarios.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

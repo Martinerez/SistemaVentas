@@ -424,8 +424,8 @@ export function Pedidos() {
       {/* HEADER */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Proveedores</h1>
-          <p className="text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">Proveedores</h1>
+          <p className="text-muted-foreground">
             Gestión de proveedores y actividad reciente
           </p>
         </div>
@@ -433,7 +433,7 @@ export function Pedidos() {
         <div className="flex gap-3">
           <Button
             onClick={() => setModalProveedor(true)}
-            className="bg-gradient-to-r from-blue-800 to-slate-900"
+            className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white shadow-md dark:from-blue-500 dark:to-blue-700"
           >
             <Plus className="size-4 mr-2" />
             Agregar Proveedor
@@ -441,7 +441,7 @@ export function Pedidos() {
 
           <Button
             onClick={() => setModalPedido(true)}
-            className="bg-gradient-to-r from-green-500 to-green-700"
+            className="bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 text-white shadow-md dark:from-green-500 dark:to-green-600"
           >
             <Plus className="size-4 mr-2" />
             Nuevo Pedido
@@ -482,8 +482,8 @@ export function Pedidos() {
             {/* HEADER CARD */}
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
-                <Store className="text-slate-700" />
-                <p className="font-bold text-slate-800">{p.name}</p>
+                <Store className="text-foreground" />
+                <p className="font-bold text-foreground">{p.name}</p>
               </div>
 
               {/* 🔥 ACTIVO INDICADOR */}
@@ -495,13 +495,13 @@ export function Pedidos() {
             </div>
 
             {/* CONTACTO */}
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Phone className="size-3.5" />
               {p.contact ?? "Sin contacto"}
             </div>
 
             {/* PEDIDOS RECIENTES */}
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-muted-foreground">
               Pedidos recientes (últimos 30 días):{" "}
               <span className="font-semibold">{p.pedidos_recientes}</span>
             </p>
@@ -510,14 +510,14 @@ export function Pedidos() {
       </div>
       {proveedorSeleccionado && (
         <Card className="p-6">
-          <h2 className="text-2xl font-bold text-slate-800">
+          <h2 className="text-2xl font-bold text-foreground">
             {proveedorSeleccionado.name}
           </h2>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             {pedidosProveedor.length} Pedidos en los últimos 30 días
           </p>
           {pedidosProveedor.length === 0 ? (
-            <p className="text-gray-500">No hay pedidos recientes</p>
+            <p className="text-muted-foreground">No hay pedidos recientes</p>
           ) : (
             <div className="rounded-xl border overflow-hidden">
               <Table>
@@ -748,7 +748,7 @@ export function Pedidos() {
             </Select>
 
             {/* ========================= PRODUCTOS ========================= */}
-            <div className="border border-slate-200 rounded-lg p-4 space-y-4">
+            <div className="border border-border rounded-lg p-4 space-y-4">
               <h3 className="font-bold">Agregar productos</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -784,7 +784,7 @@ export function Pedidos() {
 
                 <Input
                   disabled
-                  className="h-11 bg-gray-50"
+                  className="h-11 bg-muted"
                   value={
                     cantidad && totalPagado
                       ? `C$${(Number(totalPagado) / Number(cantidad)).toFixed(2)}`
@@ -807,18 +807,18 @@ export function Pedidos() {
                 {productosPedido.map((p, i) => (
                   <div
                     key={p.id}
-                    className="flex justify-between items-center bg-slate-50 p-3 rounded"
+                    className="flex justify-between items-center bg-muted p-3 rounded"
                   >
                     <div>
                       <p className="font-semibold">{p.nombre}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-muted-foreground">
                         Cant: {p.cantidad}
                       </p>
                     </div>
 
                     <div className="text-right">
                       <p>C${p.totalPagado}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         C${p.precioUnitario} unit
                       </p>
                     </div>

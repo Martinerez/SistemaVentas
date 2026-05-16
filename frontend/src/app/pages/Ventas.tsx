@@ -81,10 +81,10 @@ function ConfirmAnularModal({
         onClick={onCancel}
       />
       {/* Dialog */}
-      <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+      <div className="relative bg-card rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-red-500 to-rose-600 p-5 flex items-center gap-3">
-          <div className="bg-white/20 rounded-full p-2">
+          <div className="bg-white dark:bg-slate-800/20 rounded-full p-2">
             <AlertTriangle className="size-6 text-white" />
           </div>
           <div>
@@ -109,7 +109,7 @@ function ConfirmAnularModal({
               deshacer.
             </p>
           </div>
-          <p className="text-sm text-gray-500 text-center">
+          <p className="text-sm text-muted-foreground text-center">
             Los ítems de inventario volverán al estado <em>Disponible</em>.
           </p>
         </div>
@@ -118,7 +118,7 @@ function ConfirmAnularModal({
         <div className="px-6 pb-6 flex gap-3">
           <Button
             variant="outline"
-            className="flex-1 border-gray-200"
+            className="flex-1 border-border"
             onClick={onCancel}
             disabled={isLoading}
           >
@@ -320,36 +320,36 @@ function PaymentModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 overflow-hidden border border-gray-100">
+      <div className="relative bg-card rounded-2xl shadow-2xl max-w-sm w-full mx-4 overflow-hidden border border-border">
         <div className="bg-gradient-to-r from-green-600 to-emerald-700 p-6 text-white text-center">
           <h2 className="text-xl font-bold">Cobrar Venta</h2>
           <p className="opacity-90">Ingrese la cantidad recibida</p>
         </div>
         <div className="p-6 space-y-6">
           <div className="text-center">
-            <span className="text-sm text-gray-500 uppercase font-bold tracking-wider">Total a Pagar</span>
-            <p className="text-4xl font-black text-slate-800">C$ {total.toFixed(2)}</p>
+            <span className="text-sm text-muted-foreground uppercase font-bold tracking-wider">Total a Pagar</span>
+            <p className="text-4xl font-black text-foreground">C$ {total.toFixed(2)}</p>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700">Monto Recibido (Efectivo)</label>
+            <label className="text-sm font-semibold text-foreground">Monto Recibido (Efectivo)</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-gray-400">C$</span>
               <Input
                 type="number"
                 autoFocus
                 placeholder="0.00"
-                className="pl-10 h-12 text-lg font-bold bg-gray-50"
+                className="pl-10 h-12 text-lg font-bold bg-muted"
                 value={monto}
                 onChange={(e) => setMonto(e.target.value)}
               />
             </div>
           </div>
 
-          <div className="bg-slate-50 rounded-xl p-4 border border-dashed border-gray-300">
+          <div className="bg-muted rounded-xl p-4 border border-dashed border-gray-300">
             <div className="flex justify-between items-center">
-              <span className="font-bold text-gray-600">Cambio (Vuelto)</span>
-              <span className={`text-2xl font-black ${vuelto > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+              <span className="font-bold text-muted-foreground">Cambio (Vuelto)</span>
+              <span className={`text-2xl font-black ${vuelto > 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
                 C$ {vuelto.toFixed(2)}
               </span>
             </div>
@@ -395,39 +395,39 @@ function ReceiptModal({
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm no-print" onClick={onClose} />
 
       {/* Modal UI */}
-      <div className="relative bg-white rounded-[2.5rem] shadow-2xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in duration-300 no-print border border-slate-100">
+      <div className="relative bg-card rounded-[2.5rem] shadow-2xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in duration-300 no-print border border-border">
         <button
           onClick={onClose}
-          className="absolute top-6 right-6 z-10 bg-white/80 backdrop-blur-md hover:bg-white text-slate-400 hover:text-slate-900 size-10 rounded-full flex items-center justify-center transition-all border border-slate-100 shadow-sm active:scale-90"
+          className="absolute top-6 right-6 z-10 bg-white dark:bg-slate-800/80 backdrop-blur-md hover:bg-card text-slate-500 dark:text-slate-400 hover:text-foreground size-10 rounded-full flex items-center justify-center transition-all border border-border shadow-sm active:scale-90"
         >
           <X className="size-5" />
         </button>
 
-        <div className="bg-slate-50 p-10 text-center border-b border-slate-100">
+        <div className="bg-muted p-10 text-center border-b border-border">
           <div className="bg-green-500 size-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-200">
             <CheckCircle className="size-10 text-white" />
           </div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight">¡Venta Exitosa!</h2>
-          <p className="text-slate-500 font-medium">Comprobante generado correctamente</p>
+          <h2 className="text-2xl font-black text-foreground tracking-tight">¡Venta Exitosa!</h2>
+          <p className="text-muted-foreground font-medium">Comprobante generado correctamente</p>
         </div>
 
         <div className="p-8 space-y-6">
           <div className="relative">
             <div className="absolute -left-8 -right-8 top-0 h-px bg-dashed bg-slate-200" />
             <div className="pt-6 space-y-4 font-mono text-sm">
-              <div className="flex justify-between items-center text-slate-400">
+              <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
                 <span className="uppercase tracking-widest text-[10px] font-bold">No. Factura</span>
-                <span className="font-bold text-slate-900 text-base">#{facturaId}</span>
+                <span className="font-bold text-foreground text-base">#{facturaId}</span>
               </div>
-              <div className="flex justify-between items-center text-slate-400">
+              <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
                 <span className="uppercase tracking-widest text-[10px] font-bold">Fecha y Hora</span>
-                <span className="font-medium text-slate-600 text-xs">{fechaVenta}</span>
+                <span className="font-medium text-muted-foreground text-xs">{fechaVenta}</span>
               </div>
 
-              <div className="py-6 border-y border-dashed border-slate-200 my-2">
+              <div className="py-6 border-y border-dashed border-border my-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-400 uppercase tracking-widest text-[10px] font-bold">Total Pagado</span>
-                  <span className="text-3xl font-black text-slate-900 tracking-tighter">
+                  <span className="text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[10px] font-bold">Total Pagado</span>
+                  <span className="text-3xl font-black text-foreground tracking-tighter">
                     C$ {totalVenta.toLocaleString('es-NI', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -435,11 +435,11 @@ function ReceiptModal({
 
               {pagado > 0 && (
                 <div className="space-y-3 pt-2">
-                  <div className="flex justify-between items-center text-slate-500">
+                  <div className="flex justify-between items-center text-muted-foreground">
                     <span className="uppercase tracking-widest text-[10px] font-bold">Monto Recibido</span>
-                    <span className="font-bold text-slate-700">C$ {pagado.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</span>
+                    <span className="font-bold text-foreground">C$ {pagado.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</span>
                   </div>
-                  <div className="flex justify-between items-center text-green-600 bg-green-50/50 p-4 rounded-[1.5rem] border border-green-100 shadow-inner">
+                  <div className="flex justify-between items-center text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30/50 p-4 rounded-[1.5rem] border border-green-100 dark:border-green-800 shadow-inner">
                     <span className="font-bold uppercase tracking-widest text-[10px]">Vuelto</span>
                     <span className="font-black text-2xl tracking-tighter">C$ {vuelto.toLocaleString('es-NI', { minimumFractionDigits: 2 })}</span>
                   </div>
@@ -449,7 +449,7 @@ function ReceiptModal({
           </div>
 
           <Button
-            className="w-full h-16 rounded-[1.25rem] font-black gap-3 bg-slate-900 hover:bg-slate-800 text-white shadow-xl shadow-slate-200 transition-all active:scale-95 text-base"
+            className="w-full h-16 rounded-[1.25rem] font-black gap-3 bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-700 dark:hover:bg-slate-600 shadow-xl shadow-slate-200 transition-all active:scale-95 text-base"
             onClick={() => downloadSalePDF(sale)}
           >
             <Download className="size-6" />
@@ -459,10 +459,10 @@ function ReceiptModal({
       </div>
 
       {/* Ticket Térmico Oculto */}
-      <div id="printable-receipt" className="hidden print:block text-slate-900 font-mono text-[11px] w-[80mm] bg-white p-4">
+      <div id="printable-receipt" className="hidden print:block text-foreground font-mono text-[11px] w-[80mm] bg-card p-4">
         <div className="text-center mb-4">
           <h1 className="text-lg font-black uppercase tracking-tighter">BENDICIÓN DE DIOS</h1>
-          <div className="text-[10px] space-y-0.5 text-slate-600 italic">
+          <div className="text-[10px] space-y-0.5 text-muted-foreground italic">
             <p>De lo recibido de tu mano, te damos.</p>
             <p>Managua, Nicaragua</p>
             <p>Telf: +505 8888-8888</p>
@@ -530,7 +530,7 @@ function ReceiptModal({
           )}
         </div>
 
-        <div className="mt-8 text-center space-y-2 border-t border-dashed border-slate-300 pt-4">
+        <div className="mt-8 text-center space-y-2 border-t border-dashed border-slate-300 dark:border-slate-600 pt-4">
           <p className="font-bold text-[10px]">¡MUCHAS GRACIAS POR SU PREFERENCIA!</p>
           <p className="text-[9px] italic">"Porque de él, y por él, y para él, son todas las cosas."</p>
           <p className="font-black text-xs mt-2 uppercase tracking-widest">Dios le bendiga</p>
@@ -575,7 +575,7 @@ function VentaRow({
     <>
       {/* Fila principal */}
       <TableRow
-        className={`cursor-pointer select-none transition-colors hover:bg-gray-50 ${isAnulada ? "opacity-60 bg-red-50/40" : ""
+        className={`cursor-pointer select-none transition-colors hover:bg-muted ${isAnulada ? "opacity-60 bg-red-50 dark:bg-red-900/30/40" : ""
           }`}
         onClick={() => setExpanded((v) => !v)}
       >
@@ -594,7 +594,7 @@ function VentaRow({
         <TableCell>
           <span
             className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${isAnulada
-              ? "bg-red-100 text-red-700"
+              ? "bg-red-100 text-red-700 dark:text-red-400"
               : "bg-emerald-100 text-emerald-700"
               }`}
           >
@@ -602,7 +602,7 @@ function VentaRow({
             {venta.estado ?? "Completada"}
           </span>
         </TableCell>
-        <TableCell className="text-right font-bold text-green-700">
+        <TableCell className="text-right font-bold text-green-700 dark:text-green-400">
           C${Number(venta.total).toFixed(2)}
         </TableCell>
         <TableCell className="text-right space-x-2">
@@ -610,7 +610,7 @@ function VentaRow({
             <Button
               size="sm"
               variant="ghost"
-              className="text-red-500 hover:bg-red-50 hover:text-red-700 gap-1.5 font-semibold"
+              className="text-red-500 hover:bg-red-50 dark:bg-red-900/30 hover:text-red-700 dark:text-red-400 gap-1.5 font-semibold"
               onClick={(e) => {
                 e.stopPropagation();
                 onAnular(venta);
@@ -623,7 +623,7 @@ function VentaRow({
           <Button
             size="sm"
             variant="ghost"
-            className="text-blue-500 hover:bg-blue-50 hover:text-blue-700 gap-1.5 font-semibold"
+            className="text-blue-500 hover:bg-blue-50 dark:bg-blue-900/30 hover:text-blue-700 dark:text-blue-400 gap-1.5 font-semibold"
             onClick={(e) => {
               e.stopPropagation();
               downloadSalePDF(venta);
@@ -637,9 +637,9 @@ function VentaRow({
 
       {/* Fila expandida con detalles */}
       {expanded && (
-        <TableRow className="bg-slate-50/80">
+        <TableRow className="bg-muted/80">
           <TableCell colSpan={7} className="p-0">
-            <div className="px-8 py-4 border-t border-gray-100">
+            <div className="px-8 py-4 border-t border-border">
               {detalles.length === 0 ? (
                 <p className="text-sm text-gray-400 italic">
                   Sin detalles registrados.
@@ -647,7 +647,7 @@ function VentaRow({
               ) : (
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-gray-500 text-xs uppercase tracking-wide border-b border-gray-200">
+                    <tr className="text-left text-muted-foreground text-xs uppercase tracking-wide border-b border-border">
                       <th className="pb-2 pr-4">Cant.</th>
                       <th className="pb-2 pr-4">Producto</th>
                       <th className="pb-2 pr-4 text-right">Precio unitario</th>
@@ -662,15 +662,15 @@ function VentaRow({
                     }, {})).map((g: any, i: number) => (
                       <tr
                         key={i}
-                        className="border-b border-gray-100 last:border-0"
+                        className="border-b border-border last:border-0"
                       >
-                        <td className="py-1.5 pr-4 font-bold text-slate-800">
+                        <td className="py-1.5 pr-4 font-bold text-foreground">
                           {g.cant}x
                         </td>
-                        <td className="py-1.5 pr-4 font-medium text-slate-700">
+                        <td className="py-1.5 pr-4 font-medium text-foreground">
                           {g.nombre}
                         </td>
-                        <td className="py-1.5 text-right text-green-700 font-semibold">
+                        <td className="py-1.5 text-right text-green-700 dark:text-green-400 font-semibold">
                           C${Number(g.precio).toFixed(2)}
                         </td>
                       </tr>
@@ -969,16 +969,16 @@ export function Ventas() {
       {/* Cabecera + tabs */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">
+          <h1 className="text-2xl font-bold text-foreground">
             Terminal de Ventas
           </h1>
-          <p className="text-gray-600">Gestión de salida de productos</p>
+          <p className="text-muted-foreground">Gestión de salida de productos</p>
         </div>
         <div className="flex gap-4 border-b">
           <button
             className={`pb-2 px-4 text-sm font-semibold transition-colors ${activeTab === "pos"
-              ? "border-b-2 border-green-600 text-green-700"
-              : "text-gray-500 hover:text-slate-700"
+              ? "border-b-2 border-green-600 text-green-700 dark:text-green-400"
+              : "text-muted-foreground hover:text-foreground"
               }`}
             onClick={() => setActiveTab("pos")}
           >
@@ -986,8 +986,8 @@ export function Ventas() {
           </button>
           <button
             className={`pb-2 px-4 text-sm font-semibold transition-colors ${activeTab === "historial"
-              ? "border-b-2 border-green-600 text-green-700"
-              : "text-gray-500 hover:text-slate-700"
+              ? "border-b-2 border-green-600 text-green-700 dark:text-green-400"
+              : "text-muted-foreground hover:text-foreground"
               }`}
             onClick={() => setActiveTab("historial")}
           >
@@ -1005,7 +1005,7 @@ export function Ventas() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
                 <Input
                   placeholder="Buscar por nombre de producto..."
-                  className="pl-10 h-11 bg-gray-50 border-gray-200"
+                  className="pl-10 h-11 bg-muted border-border"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -1017,23 +1017,23 @@ export function Ventas() {
                 <Card
                   key={p.id}
                   onClick={() => addToCart(p)}
-                  className="p-4 border-0 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group bg-gradient-to-br from-white to-gray-50"
+                  className="p-4 border-0 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group bg-gradient-to-br from-white dark:from-slate-800 to-gray-50 dark:to-slate-900"
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <span className="font-bold text-lg text-slate-800">
+                    <span className="font-bold text-lg text-foreground">
                       C${Number(p.salePrice || p.precio_venta).toFixed(2)}
                     </span>
                     <span className="text-xs font-semibold bg-green-100 text-green-800 px-2 py-1 rounded-full">
                       Stock: {p.availableQty}
                     </span>
                   </div>
-                  <h3 className="font-semibold text-slate-700 min-h-[40px] leading-tight group-hover:text-green-700 transition-colors">
+                  <h3 className="font-semibold text-foreground min-h-[40px] leading-tight group-hover:text-green-700 dark:text-green-400 transition-colors">
                     {p.name || p.nombre}
                   </h3>
                 </Card>
               ))}
               {filteredProducts.length === 0 && (
-                <div className="col-span-full py-12 text-center text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed">
+                <div className="col-span-full py-12 text-center text-muted-foreground bg-muted rounded-lg border-2 border-dashed">
                   No hay productos con stock disponible para mostrar.
                 </div>
               )}
@@ -1049,7 +1049,7 @@ export function Ventas() {
                 </h2>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted">
                 {cart.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-50">
                     <ShoppingCart className="size-16 mb-4" />
@@ -1059,27 +1059,27 @@ export function Ventas() {
                   cart.map((item) => (
                     <div
                       key={item.productoId}
-                      className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-gray-100"
+                      className="flex justify-between items-center bg-card p-3 rounded-lg shadow-sm border border-border"
                     >
                       <div className="flex-1 min-w-0 pr-2">
-                        <p className="font-semibold text-sm text-slate-800 truncate">
+                        <p className="font-semibold text-sm text-foreground truncate">
                           {item.name}
                         </p>
-                        <p className="text-green-700 text-xs font-bold">
+                        <p className="text-green-700 dark:text-green-400 text-xs font-bold">
                           C${item.price.toFixed(2)}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2 bg-gray-50 rounded-lg border p-1 border-gray-200 shadow-inner">
+                      <div className="flex items-center gap-2 bg-muted rounded-lg border p-1 border-border shadow-inner">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             decreaseQuantity(item.productoId);
                           }}
-                          className="p-1 hover:bg-white rounded text-slate-600 hover:text-red-500 transition-colors"
+                          className="p-1 hover:bg-card rounded text-muted-foreground hover:text-red-500 transition-colors"
                         >
                           <Minus className="size-4" />
                         </button>
-                        <span className="w-6 text-center text-sm font-bold text-slate-800">
+                        <span className="w-6 text-center text-sm font-bold text-foreground">
                           {item.quantity}
                         </span>
                         <button
@@ -1089,7 +1089,7 @@ export function Ventas() {
                               productos.find((p) => p.id === item.productoId)
                             );
                           }}
-                          className="p-1 hover:bg-white rounded text-slate-600 hover:text-green-600 transition-colors"
+                          className="p-1 hover:bg-card rounded text-muted-foreground hover:text-green-600 dark:text-green-400 transition-colors"
                         >
                           <Plus className="size-4" />
                         </button>
@@ -1099,7 +1099,7 @@ export function Ventas() {
                           e.stopPropagation();
                           removeFromCart(item.productoId);
                         }}
-                        className="ml-3 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        className="ml-3 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:bg-red-900/30 rounded-lg transition-colors"
                       >
                         <Trash2 className="size-4" />
                       </button>
@@ -1108,10 +1108,10 @@ export function Ventas() {
                 )}
               </div>
 
-              <div className="p-6 bg-white border-t border-gray-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+              <div className="p-6 bg-card border-t border-border shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                 <div className="flex justify-between mb-4 text-2xl">
-                  <span className="font-bold text-slate-800">Total</span>
-                  <span className="font-black text-green-600">
+                  <span className="font-bold text-foreground">Total</span>
+                  <span className="font-black text-green-600 dark:text-green-400">
                     C${totalCart.toFixed(2)}
                   </span>
                 </div>
@@ -1138,7 +1138,7 @@ export function Ventas() {
         <Card className="p-6 border-0 shadow-lg">
           <div className="rounded-lg border overflow-hidden">
             <Table>
-              <TableHeader className="bg-gray-50">
+              <TableHeader className="bg-muted">
                 <TableRow>
                   <TableHead className="w-10" />
                   <TableHead>Factura</TableHead>

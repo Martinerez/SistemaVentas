@@ -34,6 +34,7 @@ import { RouterProvider } from "react-router";
 import { router } from "./routes";
 import { AuthProvider } from "./contexts/AuthContext";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "next-themes";
 
 /**
  * Componente raíz de la SPA (Single Page Application).
@@ -46,10 +47,12 @@ export default function App() {
     <>
       {/* Toaster fuera de AuthProvider: funciona aunque la sesión falle */}
       <Toaster position="top-right" richColors />
-      <AuthProvider>
-        {/* RouterProvider dentro de AuthProvider: las rutas acceden a useAuth() */}
-        <RouterProvider router={router} />
-      </AuthProvider>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <AuthProvider>
+          {/* RouterProvider dentro de AuthProvider: las rutas acceden a useAuth() */}
+          <RouterProvider router={router} />
+        </AuthProvider>
+      </ThemeProvider>
     </>
   );
 }

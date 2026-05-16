@@ -82,8 +82,8 @@ export function Dashboard() {
   if (loading || !statsData) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
-        <Loader2 className="size-12 animate-spin text-green-600" />
-        <p className="text-gray-500 font-medium">
+        <Loader2 className="size-12 animate-spin text-green-600 dark:text-green-400" />
+        <p className="text-muted-foreground font-medium">
           Calculando métricas del negocio...
         </p>
       </div>
@@ -151,10 +151,10 @@ export function Dashboard() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">
+        <h1 className="text-2xl font-bold text-foreground">
           Panel de Control General
         </h1>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           Resumen y estado del negocio al día de hoy
         </p>
       </div>
@@ -182,7 +182,7 @@ export function Dashboard() {
                   <Icon className="size-6 text-white" />
                 </div>
                 <div
-                  className={`flex items-center gap-1 text-sm font-semibold ${stat.trend === "up" ? "text-green-600" : "text-red-400"
+                  className={`flex items-center gap-1 text-sm font-semibold ${stat.trend === "up" ? "text-green-600 dark:text-green-400" : "text-red-400"
                     }`}
                 >
                   {stat.trend === "up" ? (
@@ -193,8 +193,8 @@ export function Dashboard() {
                   <span>{stat.change}</span>
                 </div>
               </div>
-              <p className="text-sm text-gray-600 mb-1">{stat.label}</p>
-              <p className="text-3xl font-bold text-slate-800">{stat.value}</p>
+              <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
+              <p className="text-3xl font-bold text-foreground">{stat.value}</p>
             </Card>
           );
         })}
@@ -203,10 +203,10 @@ export function Dashboard() {
       {/* Chart Section */}
       <Card className="p-6 border-0 shadow-lg">
         <div className="mb-6">
-          <h3 className="font-bold text-lg text-slate-800">
+          <h3 className="font-bold text-lg text-foreground">
             Tendencia de Ventas
           </h3>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             Ingresos generados en la última semana
           </p>
         </div>
@@ -292,10 +292,10 @@ export function Dashboard() {
                 <AlertTriangle className="size-5 text-white" />
               </div>
               <div>
-                <h3 className="font-bold text-lg text-slate-800">
+                <h3 className="font-bold text-lg text-foreground">
                   Productos con Stock Bajo
                 </h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Requieren reabastecimiento urgente
                 </p>
               </div>
@@ -310,23 +310,23 @@ export function Dashboard() {
               lowStockItems.map((product: any) => (
                 <div
                   key={product.id}
-                  className="flex items-center justify-between p-4 bg-gradient-to-r from-red-50 to-white rounded-xl hover:shadow-md transition-all duration-200 border border-red-100"
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-red-50 dark:from-red-900/30 to-white dark:to-slate-800 rounded-xl hover:shadow-md transition-all duration-200 border border-red-100 dark:border-red-800"
                 >
                   <div className="flex-1">
-                    <p className="font-semibold text-sm text-slate-800">
+                    <p className="font-semibold text-sm text-foreground">
                       {product.name}
                     </p>
-                    <p className="text-xs text-gray-500">{product.category}</p>
+                    <p className="text-xs text-muted-foreground">{product.category}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-red-600">
+                    <p className="text-sm font-bold text-red-600 dark:text-red-400">
                       {product.stock} unidades
                     </p>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-8 text-gray-500 border border-dashed rounded-xl">
+              <div className="text-center py-8 text-muted-foreground border border-dashed rounded-xl">
                 No hay productos con stock bajo
               </div>
             )}
@@ -341,10 +341,10 @@ export function Dashboard() {
                 <ShoppingCart className="size-5 text-white" />
               </div>
               <div>
-                <h3 className="font-bold text-lg text-slate-800">
+                <h3 className="font-bold text-lg text-foreground">
                   Ventas Recientes
                 </h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Últimas transacciones completadas
                 </p>
               </div>
@@ -356,29 +356,29 @@ export function Dashboard() {
               recentSales.map((sale: any) => (
                 <div
                   key={sale.id}
-                  className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-white rounded-xl hover:shadow-md transition-all duration-200 border border-green-50"
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 dark:from-green-900/30 to-white dark:to-slate-800 rounded-xl hover:shadow-md transition-all duration-200 border border-green-50 dark:border-green-900/30"
                 >
                   <div className="flex items-center gap-3">
                     <div className="size-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md text-white font-bold text-sm">
                       #{sale.id}
                     </div>
                     <div>
-                      <p className="font-semibold text-sm text-slate-800">
+                      <p className="font-semibold text-sm text-foreground">
                         Ticket Venta
                       </p>
-                      <p className="text-xs text-gray-500">{sale.time}</p>
+                      <p className="text-xs text-muted-foreground">{sale.time}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-sm text-green-700">
+                    <p className="font-bold text-sm text-green-700 dark:text-green-400">
                       {`C$ ${Number(String(sale.total).replace(/[^0-9.-]+/g, "")).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                     </p>
-                    <p className="text-xs text-gray-500">{sale.items} items</p>
+                    <p className="text-xs text-muted-foreground">{sale.items} items</p>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-8 text-gray-500 border border-dashed rounded-xl">
+              <div className="text-center py-8 text-muted-foreground border border-dashed rounded-xl">
                 Aún no hay ventas registradas.
               </div>
             )}

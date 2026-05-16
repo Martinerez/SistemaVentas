@@ -154,10 +154,10 @@ export function Perdidas() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">
+          <h1 className="text-2xl font-bold text-foreground">
             Control de Pérdidas
           </h1>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Registro de mermas, productos vencidos o dañados
           </p>
         </div>
@@ -201,11 +201,11 @@ export function Perdidas() {
                     key={p.id}
                     className="hover:bg-red-50 transition-colors"
                   >
-                    <TableCell className="font-medium text-slate-800">
+                    <TableCell className="font-medium text-foreground">
                       #{p.id.toString().padStart(4, "0")}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2 text-slate-600">
+                      <div className="flex items-center gap-2 text-muted-foreground">
                         <Calendar className="size-4" />
                         {new Date(p.fecha).toLocaleDateString()}
                       </div>
@@ -241,7 +241,7 @@ export function Perdidas() {
                 <TableRow>
                   <TableCell
                     colSpan={5}
-                    className="text-center py-8 text-gray-500"
+                    className="text-center py-8 text-muted-foreground"
                   >
                     No se encontraron registros de pérdidas.
                   </TableCell>
@@ -255,7 +255,7 @@ export function Perdidas() {
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-800">
+            <DialogTitle className="text-xl font-bold text-foreground">
               Detalle de Pérdida #{selectedPerdida?.id}
             </DialogTitle>
           </DialogHeader>
@@ -266,40 +266,40 @@ export function Perdidas() {
                 <div key={index} className="border rounded-lg p-3 space-y-2">
                   {/* Producto */}
                   <div>
-                    <Label className="font-semibold text-slate-800">
+                    <Label className="font-semibold text-foreground">
                       Producto
                     </Label>
-                    <p className="text-gray-700">{d.productoNombre}</p>
+                    <p className="text-foreground">{d.productoNombre}</p>
                   </div>
 
                   {/* Cantidad */}
                   <div>
-                    <Label className="font-semibold text-slate-800">
+                    <Label className="font-semibold text-foreground">
                       Cantidad
                     </Label>
-                    <p className="text-gray-700">1</p>
+                    <p className="text-foreground">1</p>
                   </div>
 
                   {/* Precio */}
                   <div>
-                    <Label className="font-semibold text-slate-800">
+                    <Label className="font-semibold text-foreground">
                       Precio Unitario
                     </Label>
-                    <p className="text-gray-700">
+                    <p className="text-foreground">
                       C${Number(d.precioCompraUnitario).toFixed(2)}
                     </p>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-gray-500 text-center">
+              <p className="text-muted-foreground text-center">
                 No hay detalles para esta pérdida.
               </p>
             )}
 
             {/*  TOTAL ABAJO */}
             <div className="border-t pt-3 flex justify-between items-center">
-              <span className="font-semibold text-slate-800">
+              <span className="font-semibold text-foreground">
                 Total Perdido:
               </span>
               <span className="font-bold text-red-600 text-lg">
@@ -337,7 +337,7 @@ export function Perdidas() {
                     </SelectItem>
                   ))}
                   {inventarioDisponible.length === 0 && (
-                    <div className="p-2 text-sm text-gray-500 text-center">
+                    <div className="p-2 text-sm text-muted-foreground text-center">
                       No hay ítems disponibles.
                     </div>
                   )}

@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { useAuth } from "../contexts/AuthContext";
+import { ThemeToggle } from "./ThemeToggle";
 
 /**
  * Componente de layout principal del dashboard.
@@ -91,16 +92,16 @@ export function DashboardLayout() {
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <>
       {/* Logo y nombre del sistema */}
-      <div className={`p-6 border-b ${mobile ? "flex items-center justify-between" : ""}`}>
+      <div className={`p-6 border-b border-border ${mobile ? "flex items-center justify-between" : ""}`}>
         <div className="flex items-center gap-3">
           <div className="size-10 bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg flex items-center justify-center shadow-lg">
             <Store className="size-6 text-white" />
           </div>
           <div>
-            <h1 className="font-bold text-lg bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+            <h1 className="font-bold text-lg bg-gradient-to-r from-slate-800 to-slate-600 dark:from-slate-100 dark:to-slate-300 bg-clip-text text-transparent">
               Bendición de Dios
             </h1>
-            <p className="text-xs text-gray-500">Sistema de Ventas</p>
+            <p className="text-xs text-muted-foreground">Sistema de Ventas</p>
           </div>
         </div>
         {/* Botón de cierre solo en el sidebar móvil (overlay) */}
@@ -129,8 +130,8 @@ export function DashboardLayout() {
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                       isActive
-                        ? "bg-gradient-to-r from-slate-700 to-slate-800 text-white font-medium shadow-md"
-                        : "text-gray-700 hover:bg-gray-100"
+                        ? "bg-gradient-to-r from-slate-700 to-slate-800 dark:from-slate-600 dark:to-slate-700 text-white font-medium shadow-md"
+                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                     }`
                   }
                 >
@@ -144,10 +145,10 @@ export function DashboardLayout() {
       </nav>
 
       {/* Botón de logout fijo en la parte inferior del sidebar */}
-      <div className="p-4 border-t">
+      <div className="p-4 border-t border-border">
         <button
           onClick={logout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors font-medium"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors font-medium"
         >
           <LogOut className="size-5" />
           <span>Cerrar Sesión</span>
@@ -157,12 +158,12 @@ export function DashboardLayout() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground transition-colors">
 
       {/* ── Sidebar Desktop (siempre visible en md+) ────────────────────── */}
       {/* `fixed`: Permanece en su posición aunque se haga scroll en el contenido. */}
       {/* `z-40`: Por encima del contenido pero debajo de modales (z-50+). */}
-      <aside className="hidden md:flex md:flex-col fixed left-0 top-0 h-screen w-64 bg-white border-r shadow-sm z-40">
+      <aside className="hidden md:flex md:flex-col fixed left-0 top-0 h-screen w-64 bg-card border-r border-border shadow-sm z-40 transition-colors">
         <SidebarContent />
       </aside>
 
@@ -176,7 +177,7 @@ export function DashboardLayout() {
           onClick={() => setIsSidebarOpen(false)}
         >
           <aside
-            className="fixed left-0 top-0 h-screen w-64 bg-white shadow-lg flex flex-col"
+            className="fixed left-0 top-0 h-screen w-64 bg-card shadow-lg flex flex-col transition-colors"
             onClick={(e) => e.stopPropagation()}
           >
             <SidebarContent mobile />
@@ -189,31 +190,32 @@ export function DashboardLayout() {
       <div className="md:ml-64 min-h-screen">
 
         {/* Header sticky: Permanece visible al hacer scroll */}
-        <header className="bg-white border-b sticky top-0 z-30 shadow-sm">
+        <header className="bg-card border-b border-border sticky top-0 z-30 shadow-sm transition-colors">
           <div className="flex items-center justify-between px-4 md:px-8 py-4">
             <div className="flex items-center gap-4">
               {/* Botón de menú hamburgesa — Solo visible en móvil */}
               <button
-                className="md:hidden"
+                className="md:hidden text-foreground"
                 onClick={() => setIsSidebarOpen(true)}
               >
                 <Menu className="size-6" />
               </button>
               <div>
-                <h2 className="font-semibold text-lg text-slate-800">Panel de Control</h2>
-                <p className="text-sm text-gray-500">Bienvenido de vuelta</p>
+                <h2 className="font-semibold text-lg text-foreground">Panel de Control</h2>
+                <p className="text-sm text-muted-foreground">Bienvenido de vuelta</p>
               </div>
             </div>
 
             {/* Info del usuario logueado: Nombre y rol del JWT decodificado */}
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-3 pl-3 border-l">
+              <ThemeToggle />
+              <div className="flex items-center gap-3 pl-3 border-l border-border">
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm font-medium text-slate-800">
+                  <p className="text-sm font-medium text-foreground">
                     {userName || "Usuario"}
                   </p>
                   {/* El rol se muestra como badge (admin/vendedor) */}
-                  <p className="text-xs font-semibold capitalize px-2 py-0.5 rounded-full inline-block mt-0.5 bg-slate-100 text-slate-600">
+                  <p className="text-xs font-semibold capitalize px-2 py-0.5 rounded-full inline-block mt-0.5 bg-muted text-muted-foreground">
                     {userRole || ""}
                   </p>
                 </div>

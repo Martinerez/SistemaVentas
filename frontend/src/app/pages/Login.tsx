@@ -78,13 +78,13 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-muted flex flex-col justify-center items-center p-4">
       <div className="mb-8 flex flex-col items-center">
         <div className="bg-green-600 p-4 rounded-full mb-4 shadow-lg text-white">
           <Store className="size-10" />
         </div>
-        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Bendición de Dios</h1>
-        <p className="text-slate-500 font-medium">Sistema de Ventas e Inventario</p>
+        <h1 className="text-3xl font-bold text-foreground tracking-tight">Bendición de Dios</h1>
+        <p className="text-muted-foreground font-medium">Sistema de Ventas e Inventario</p>
       </div>
 
       <Card className="w-full max-w-md shadow-2xl border-0">
@@ -94,7 +94,7 @@ export function Login() {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium leading-none text-slate-700">Correo Electrónico</label>
+              <label className="text-sm font-medium leading-none text-foreground">Correo Electrónico</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
                 <Input 
@@ -108,7 +108,7 @@ export function Login() {
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium leading-none text-slate-700">Contraseña</label>
+              <label className="text-sm font-medium leading-none text-foreground">Contraseña</label>
               <div className="relative">
                 <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
                 <Input 
