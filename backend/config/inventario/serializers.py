@@ -83,6 +83,7 @@ class DetalleEntradaInventarioSerializer(serializers.ModelSerializer):
     )
     # Atajo read-only para el nombre del producto — evita un join en el frontend
     productoNombre = serializers.CharField(source="IdProducto.Nombre", read_only=True)
+    productoPresentacion = serializers.CharField(source="IdProducto.Presentacion", read_only=True)
     # Anidamiento de las unidades físicas del lote — usa related_name="inventarios"
     estadoItems = InventarioMiniSerializer(
         source="inventarios",
@@ -93,7 +94,7 @@ class DetalleEntradaInventarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = DetalleEntradaInventario
         fields = [
-            'id', 'entradaInventarioId', 'productoId', 'productoNombre',
+            'id', 'entradaInventarioId', 'productoId', 'productoNombre', 'productoPresentacion',
             'cantidad', 'precioCompraUnitario', 'estadoItems'
         ]
 
@@ -180,10 +181,14 @@ class DetallePerdidaSerializer(serializers.ModelSerializer):
         source="IdInventario.IdDetalleEntrada.IdProducto.Nombre",
         read_only=True
     )
+    productoPresentacion = serializers.CharField(
+        source="IdInventario.IdDetalleEntrada.IdProducto.Presentacion",
+        read_only=True
+    )
 
     class Meta:
         model = DetallePerdida
-        fields = ['id', 'perdidaId', 'inventarioId', 'precioCompraUnitario', 'productoNombre']
+        fields = ['id', 'perdidaId', 'inventarioId', 'precioCompraUnitario', 'productoNombre', 'productoPresentacion']
 
 
 class PerdidaSerializer(serializers.ModelSerializer):
@@ -257,12 +262,16 @@ class DetalleSolicitudDevolucionSerializer(serializers.ModelSerializer):
         source="IdInventario.IdDetalleEntrada.IdProducto.Nombre",
         read_only=True
     )
+    productoPresentacion = serializers.CharField(
+        source="IdInventario.IdDetalleEntrada.IdProducto.Presentacion",
+        read_only=True
+    )
 
     class Meta:
         model = DetalleSolicitudDevolucion
         fields = [
             'id', 'solicitudDevolucionId', 'inventarioId',
-            'motivoRechazo', 'precioCompraUnitario', 'estadoItem', 'productoNombre'
+            'motivoRechazo', 'precioCompraUnitario', 'estadoItem', 'productoNombre', 'productoPresentacion'
         ]
 
 

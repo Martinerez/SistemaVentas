@@ -138,6 +138,7 @@ export function Devoluciones() {
           prodId,
           entradaId,
           nombre: data.prod.name || data.prod.Nombre,
+          presentacion: data.prod.presentacion || data.prod.Presentacion,
           precioCompra: data.det.PrecioCompra || data.det.precioCompraUnitario || 0,
           items: []
         };
@@ -385,7 +386,7 @@ export function Devoluciones() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="font-semibold text-muted-foreground block">Producto:</span>
-                  <span className="text-foreground">{selectedDevolucion.detalles?.[0]?.productoNombre || "N/A"}</span>
+                  <span className="text-foreground">{selectedDevolucion.detalles?.[0]?.productoNombre || "N/A"} {selectedDevolucion.detalles?.[0]?.productoPresentacion ? `(${selectedDevolucion.detalles?.[0]?.productoPresentacion})` : ''}</span>
                 </div>
                 <div>
                   <span className="font-semibold text-muted-foreground block">Cantidad:</span>
@@ -487,7 +488,7 @@ export function Devoluciones() {
                 <SelectContent>
                   {getAvailableGroups().map((group: any) => (
                     <SelectItem key={group.key} value={group.key}>
-                      {group.nombre} - Compra #{group.entradaId} ({group.items.length} disp.)
+                      {group.nombre} {group.presentacion ? `(${group.presentacion})` : ""} - Compra #{group.entradaId} ({group.items.length} disp.)
                     </SelectItem>
                   ))}
                   {getAvailableGroups().length === 0 && (

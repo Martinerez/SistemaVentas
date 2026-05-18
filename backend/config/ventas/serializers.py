@@ -62,10 +62,11 @@ class DetalleVentaSerializer(serializers.ModelSerializer):
     # Campo calculado: Navega Inventario → DetalleEntrada → Producto para obtener el nombre.
     # Solo lectura (read_only implícito en SerializerMethodField).
     nombreProducto = serializers.SerializerMethodField()
+    presentacionProducto = serializers.SerializerMethodField()
 
     class Meta:
         model = DetalleVenta
-        fields = ['id', 'ventaId', 'inventarioId', 'precioVentaUnitario', 'nombreProducto']
+        fields = ['id', 'ventaId', 'inventarioId', 'precioVentaUnitario', 'nombreProducto', 'presentacionProducto']
 
     def get_nombreProducto(self, obj):
         """
@@ -92,6 +93,15 @@ class DetalleVentaSerializer(serializers.ModelSerializer):
             return obj.IdInventario.IdDetalleEntrada.IdProducto.Nombre
         except AttributeError:
             return 'Producto desconocido'
+
+    def get_presentacionProducto(self, obj):
+        """
+        Obtiene la presentación del producto navegando la cadena de relaciones FK.
+        """
+        try:
+            return obj.IdInventario.IdDetalleEntrada.IdProducto.Presentacion
+        except AttributeError:
+            return None
 
 
 class VentaSerializer(serializers.ModelSerializer):

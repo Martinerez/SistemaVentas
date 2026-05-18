@@ -343,6 +343,7 @@ export function Pedidos() {
       id: Date.now(),
       productoId,
       nombre: producto.name,
+      presentacion: producto.presentacion,
       cantidad: Number(cantidad),
       totalPagado: Number(totalPagado),
       precioUnitario: Number(totalPagado) / Number(cantidad),
@@ -628,7 +629,7 @@ export function Pedidos() {
 
                   return (
                     <TableRow key={d.id}>
-                      <TableCell>{d.productoNombre}</TableCell>
+                      <TableCell>{d.productoNombre} {d.productoPresentacion ? `(${d.productoPresentacion})` : ''}</TableCell>
                       <TableCell>{d.cantidad}</TableCell>
                       <TableCell>C${Number(d.precioCompraUnitario).toFixed(2)}</TableCell>
                       <TableCell>C${subtotal.toFixed(2)}</TableCell>
@@ -784,7 +785,7 @@ export function Pedidos() {
                   <SelectContent>
                     {productos.map((p) => (
                       <SelectItem key={p.id} value={p.id.toString()}>
-                        {p.name}
+                        {p.name} {p.presentacion ? `(${p.presentacion})` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -834,7 +835,7 @@ export function Pedidos() {
                     className="flex justify-between items-center bg-muted p-3 rounded"
                   >
                     <div>
-                      <p className="font-semibold">{p.nombre}</p>
+                      <p className="font-semibold">{p.nombre} {p.presentacion ? `(${p.presentacion})` : ""}</p>
                       <p className="text-sm text-muted-foreground">
                         Cant: {p.cantidad}
                       </p>

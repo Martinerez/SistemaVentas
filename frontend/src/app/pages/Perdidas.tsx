@@ -108,6 +108,7 @@ export function Perdidas() {
           prodId,
           entradaId,
           nombre: prod.name,
+          presentacion: prod.presentacion || prod.Presentacion,
           precioCompra: Number(det.precioCompraUnitario),
           items: []
         };
@@ -296,7 +297,7 @@ export function Perdidas() {
                     <Label className="font-semibold text-foreground">
                       Producto
                     </Label>
-                    <p className="text-foreground">{d.productoNombre}</p>
+                    <p className="text-foreground">{d.productoNombre} {d.productoPresentacion ? `(${d.productoPresentacion})` : ''}</p>
                   </div>
 
                   <div>
@@ -362,7 +363,7 @@ export function Perdidas() {
                 <SelectContent>
                   {getAvailableGroups().map((group: any) => (
                     <SelectItem key={group.key} value={group.key}>
-                      {group.nombre} - Compra #{group.entradaId} ({group.items.length} disp.)
+                      {group.nombre} {group.presentacion ? `(${group.presentacion})` : ""} - Compra #{group.entradaId} ({group.items.length} disp.)
                     </SelectItem>
                   ))}
                   {getAvailableGroups().length === 0 && (

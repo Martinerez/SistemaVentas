@@ -655,7 +655,7 @@ function VentaRow({
                   </thead>
                   <tbody>
                     {Object.values(detalles.reduce((acc: any, d: any) => {
-                      const key = d.nombreProducto || `Inventario #${d.inventarioId}`;
+                      const key = d.presentacionProducto ? `${d.nombreProducto} (${d.presentacionProducto})` : d.nombreProducto || `Inventario #${d.inventarioId}`;
                       if (!acc[key]) acc[key] = { nombre: key, cant: 0, precio: d.precioVentaUnitario };
                       acc[key].cant += 1;
                       return acc;
@@ -821,7 +821,7 @@ export function Ventas() {
         ...cart,
         {
           productoId: product.id,
-          name: product.name || product.nombre,
+          name: `${product.name || product.nombre} ${product.presentacion ? `(${product.presentacion})` : ""}`,
           price: Number(product.salePrice || product.precio_venta || 0),
           quantity: 1,
           inventarioIds: product.inventarioIds,
@@ -1028,7 +1028,7 @@ export function Ventas() {
                     </span>
                   </div>
                   <h3 className="font-semibold text-foreground min-h-[40px] leading-tight group-hover:text-green-700 dark:text-green-400 transition-colors">
-                    {p.name || p.nombre}
+                    {p.name || p.nombre} {p.presentacion ? `(${p.presentacion})` : ""}
                   </h3>
                 </Card>
               ))}
