@@ -111,7 +111,7 @@ class DetalleEntradaInventario(models.Model):
         db_column='IdEntradaInventario'
     )
     IdProducto = models.ForeignKey(Producto, on_delete=models.RESTRICT, db_column='IdProducto')
-    TipoCompra = models.CharField(max_length=30, null=True, blank=True)
+    TipoCompra = models.CharField(max_length=30, null=True, blank=True, default="unidad")
     Cantidad = models.IntegerField(null=False, blank=False, validators=[MinValueValidator(1)])
     PrecioCompraUnitario = models.DecimalField(
         max_digits=12, decimal_places=2, null=False, blank=False,
