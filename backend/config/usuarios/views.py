@@ -29,9 +29,10 @@ from rest_framework.response import Response
 from .models import Usuario
 from .serializers import UsuarioSerializer
 from .permissions import IsAdminRole
+from auditoria.mixins import AuditoriaMixin, registrar_evento_manual
 
 
-class UsuarioViewSet(viewsets.ModelViewSet):
+class UsuarioViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     """
     ViewSet completo para operaciones CRUD sobre el modelo Usuario.
 
@@ -45,6 +46,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
     permission_classes = [IsAdminRole]
+    MODULO_AUDITORIA = 'USUARIOS'
 
 
 @api_view(['PATCH'])
@@ -92,9 +94,20 @@ def cambiar_email_directo(request, user_id):
         if not re.match(regex, nuevo_email):
             return Response({"error": "Correo no válido"}, status=400)
 
+        email_anterior = user.Email
         # Guardar directamente sin pasar por el serializer (sin validaciones extra)
         user.Email = nuevo_email
         user.save()
+
+        # Registrar la acción en el log de auditoría
+        registrar_evento_manual(
+            request=request,
+            accion='MODIFICAR',
+            modulo='USUARIOS',
+            descripcion=f'Cambio directo de email del usuario ID {user_id}: {email_anterior} → {nuevo_email}',
+            datos_anteriores={'email': email_anterior},
+            datos_nuevos={'email': nuevo_email},
+        )
 
         return Response({"mensaje": "Correo actualizado correctamente", "email": user.Email})
 

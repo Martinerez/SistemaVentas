@@ -63,6 +63,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import { GuiaUsuario } from "./pages/GuiaUsuario";
 import { Reportes } from "./pages/Reportes";
+import { Auditoria } from "./pages/Auditoria";
 
 /**
  * Objeto router exportado para ser consumido por <RouterProvider> en App.tsx.
@@ -111,6 +112,11 @@ export const router = createBrowserRouter([
             path: "reportes",
             Component: AdminRoute,
             children: [{ index: true, Component: Reportes }],
+          },
+          {
+            path: "auditoria",
+            Component: AdminRoute,
+            children: [{ index: true, Component: Auditoria }],
           },
         ],
       },

@@ -90,6 +90,7 @@ INSTALLED_APPS = [
     'catalogo',   # Categorías, proveedores y productos
     'inventario', # Entradas, stock físico, pérdidas y devoluciones
     'ventas',     # Transacciones de venta y reportes gerenciales
+    'auditoria',  # Módulo de auditoría del sistema y la base de datos
     # Proveedor de JWT (JSON Web Tokens) para la autenticación stateless
     'rest_framework_simplejwt',
 ]
