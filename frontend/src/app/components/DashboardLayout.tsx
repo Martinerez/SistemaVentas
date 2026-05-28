@@ -29,7 +29,7 @@ import { Outlet, NavLink, Navigate } from "react-router";
 import {
   LayoutDashboard, Package, Warehouse, ShoppingCart, Truck,
   TrendingDown, RefreshCcw, Settings, Menu, X, Store,
-  User, Briefcase, Users, LogOut, BookOpen, BarChart3,
+  User, Briefcase, Users, LogOut, BookOpen, BarChart3, ShieldCheck,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { useAuth } from "../contexts/AuthContext";
@@ -69,6 +69,7 @@ export function DashboardLayout() {
     { icon: TrendingDown, label: "Pérdidas", path: "/perdidas" },
     { icon: RefreshCcw, label: "Devoluciones", path: "/devoluciones" },
     { icon: BarChart3, label: "Reportes", path: "/reportes" },
+    { icon: ShieldCheck, label: "Auditoría", path: "/auditoria" },
     { icon: Users, label: "Usuarios", path: "/usuarios" },
     { icon: Settings, label: "Ajustes", path: "/ajustes" },
     { icon: BookOpen, label: "Guía Usuario", path: "/guia-usuario" },

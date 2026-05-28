@@ -40,11 +40,12 @@ from inventario.models import Inventario, Perdida
 from usuarios.models import Usuario
 from usuarios.permissions import IsAdminRole, IsAdminOrReadOnly, CanProcessSale
 from .serializers import VentaSerializer, DetalleVentaSerializer
+from auditoria.mixins import AuditoriaMixin, registrar_evento_manual
 
 
 # ─── VIEWSETS CRUD ────────────────────────────────────────────────────────────
 
-class VentaViewSet(viewsets.ModelViewSet):
+class VentaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     """
     CRUD estándar para el modelo Venta.
 
@@ -59,9 +60,10 @@ class VentaViewSet(viewsets.ModelViewSet):
     serializer_class = VentaSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     pagination_class = None
+    MODULO_AUDITORIA = 'VENTAS'
 
 
-class DetalleVentaViewSet(viewsets.ModelViewSet):
+class DetalleVentaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     """
     CRUD para detalles individuales de venta.
 
@@ -71,6 +73,7 @@ class DetalleVentaViewSet(viewsets.ModelViewSet):
     queryset = DetalleVenta.objects.all()
     serializer_class = DetalleVentaSerializer
     permission_classes = [IsAuthenticated, IsAdminRole]
+    MODULO_AUDITORIA = 'VENTAS'
 
 
 # ─── PROCESAMIENTO DE VENTAS ──────────────────────────────────────────────────
@@ -151,6 +154,14 @@ class ProcesarVentaView(APIView):
                 "total": venta.Total
             }, status=status.HTTP_201_CREATED)
         except Exception as e:
+            # Registrar el intento fallido en auditoría
+            registrar_evento_manual(
+                request=request,
+                accion='PROCESAR',
+                modulo='VENTAS',
+                descripcion=f'Error al procesar venta: {str(e)}',
+                resultado='FALLIDO',
+            )
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -209,6 +220,16 @@ class AnularVentaView(APIView):
 
         venta.Estado = 'Anulada'
         venta.save()
+
+        # Registrar la anulación en el log de auditoría
+        registrar_evento_manual(
+            request=request,
+            accion='ANULAR',
+            modulo='VENTAS',
+            descripcion=f'Venta #{pk} anulada por {getattr(request.user, "Nombre", "Admin")}. Stock revertido.',
+            datos_anteriores={'estado': 'Completada', 'id_venta': pk},
+            datos_nuevos={'estado': 'Anulada', 'id_venta': pk},
+        )
 
         return Response(
             {"message": f"Venta #{pk} anulada correctamente. Stock revertido."},

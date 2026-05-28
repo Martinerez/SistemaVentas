@@ -31,16 +31,21 @@ ENDPOINTS GENERADOS AUTOMÁTICAMENTE POR ModelViewSet:
     PATCH  /api/catalogo/categorias/<id>/     → actualización parcial
     DELETE /api/catalogo/categorias/<id>/     → eliminar (RESTRICT si tiene productos)
     (ídem para proveedores/ y productos/)
+
+AUDITORÍA:
+    AuditoriaMixin intercepta automáticamente las mutaciones (POST, PUT, PATCH, DELETE)
+    y registra el log en la tabla LogAuditoria. Los GETs no se registran.
 """
 
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from usuarios.permissions import IsAdminOrReadOnly
+from auditoria.mixins import AuditoriaMixin
 from .models import Categoria, Proveedor, Producto
 from .serializers import CategoriaSerializer, ProveedorSerializer, ProductoSerializer
 
 
-class CategoriaViewSet(viewsets.ModelViewSet):
+class CategoriaViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     """
     CRUD completo para el modelo Categoria.
 
@@ -52,12 +57,12 @@ class CategoriaViewSet(viewsets.ModelViewSet):
     queryset = Categoria.objects.all()
     serializer_class = CategoriaSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
-    # Sin paginación: el frontend carga todo el catálogo de categorías en la
-    # página de Productos para poblar el select de "Categoría" del formulario.
     pagination_class = None
+    # Identificador de módulo para los logs de auditoría
+    MODULO_AUDITORIA = 'CATEGORIAS'
 
 
-class ProveedorViewSet(viewsets.ModelViewSet):
+class ProveedorViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     """
     CRUD completo para el modelo Proveedor.
 
@@ -69,9 +74,10 @@ class ProveedorViewSet(viewsets.ModelViewSet):
     serializer_class = ProveedorSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     pagination_class = None
+    MODULO_AUDITORIA = 'PROVEEDORES'
 
 
-class ProductoViewSet(viewsets.ModelViewSet):
+class ProductoViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     """
     CRUD completo para el modelo Producto.
 
@@ -85,3 +91,4 @@ class ProductoViewSet(viewsets.ModelViewSet):
     serializer_class = ProductoSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     pagination_class = None
+    MODULO_AUDITORIA = 'PRODUCTOS'

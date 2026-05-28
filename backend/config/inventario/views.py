@@ -41,9 +41,10 @@ from .serializers import (
     PerdidaSerializer, DetallePerdidaSerializer, SolicitudDevolucionSerializer,
     DetalleSolicitudDevolucionSerializer
 )
+from auditoria.mixins import AuditoriaMixin, registrar_evento_manual
 
 
-class EntradaInventarioViewSet(viewsets.ModelViewSet):
+class EntradaInventarioViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     """
     CRUD completo para entradas de inventario (pedidos de compra).
 
@@ -59,6 +60,7 @@ class EntradaInventarioViewSet(viewsets.ModelViewSet):
     serializer_class = EntradaInventarioSerializer
     permission_classes = [IsAuthenticated, IsAdminRole]
     pagination_class = None
+    MODULO_AUDITORIA = 'INVENTARIO'
 
     @action(detail=True, methods=["delete"])
     @transaction.atomic
@@ -295,6 +297,13 @@ class ProcesarPerdidaView(APIView):
                 inventario.save()
             return Response({"message": "Pérdida procesada"}, status=status.HTTP_201_CREATED)
         except Exception as e:
+            registrar_evento_manual(
+                request=request,
+                accion='PROCESAR',
+                modulo='PERDIDAS',
+                descripcion=f'Error al procesar pérdida: {str(e)}',
+                resultado='FALLIDO',
+            )
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
