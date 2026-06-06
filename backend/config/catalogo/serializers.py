@@ -189,12 +189,13 @@ class ProductoSerializer(serializers.ModelSerializer):
     proveedorId = serializers.PrimaryKeyRelatedField(source='IdProveedor', queryset=Proveedor.objects.all(), required=True, allow_null=False)
     presentacion = serializers.CharField(source='Presentacion', required=False, allow_null=True, allow_blank=True)
     status = serializers.CharField(source='Estado', required=False)
+    imagen = serializers.CharField(source='Imagen', required=False, allow_null=True, allow_blank=True)
     stock = serializers.SerializerMethodField()
     salePrice = serializers.SerializerMethodField()
 
     class Meta:
         model = Producto
-        fields = ['id', 'name', 'categoryId', 'status', 'stock', 'salePrice', 'proveedorId', 'presentacion']
+        fields = ['id', 'name', 'categoryId', 'status', 'stock', 'salePrice', 'proveedorId', 'presentacion', 'imagen']
 
     def get_stock(self, obj):
         """
@@ -234,6 +235,6 @@ class ProductoSerializer(serializers.ModelSerializer):
         profit = float(obj.IdCategoria.PorcentajeGanancia)
 
         # Precio final
-        return round(base_price * (1 + (profit / 100)), 2)
+        return int(round(base_price * (1 + (profit / 100))))
     
     

@@ -286,46 +286,34 @@ export function Perdidas() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             {/*  LISTA DE DETALLES */}
-            {selectedPerdida?.detalles?.length > 0 ? (
-              selectedPerdida.detalles.map((d: any, index: number) => (
-                <div key={index} className="border rounded-lg p-3 space-y-2">
-                  {/* Producto */}
-                  <div>
-                    <Label className="font-semibold text-foreground">
-                      Producto
-                    </Label>
-                    <p className="text-foreground">
-                      {d.productoNombre}{" "}
-                      {d.productoPresentacion
-                        ? `(${d.productoPresentacion})`
-                        : ""}
-                    </p>
-                  </div>
-
-                  <div>
-                    <Label className="font-semibold text-foreground">
-                      Cantidad
-                    </Label>
-                    <p className="text-foreground">
-                      {selectedPerdida.detalles.length || 1}
-                    </p>
-                  </div>
-
-                  {/* Precio */}
-                  <div>
-                    <Label className="font-semibold text-foreground">
-                      Precio Unitario
-                    </Label>
-                    <p className="text-foreground">
-                      C${Number(d.precioCompraUnitario).toFixed(2)}
-                    </p>
-                  </div>
+            {/* LISTA DE DETALLES */}
+            {selectedPerdida?.detalles?.length > 0 && (
+              <div className="border rounded-lg p-3 space-y-2">
+                {/* Producto */}
+                <div>
+                  <Label className="font-semibold text-foreground">Producto</Label>
+                  <p className="text-foreground">
+                    {selectedPerdida.detalles[0].productoNombre}{" "}
+                    {selectedPerdida.detalles[0].productoPresentacion
+                      ? `(${selectedPerdida.detalles[0].productoPresentacion})`
+                      : ""}
+                  </p>
                 </div>
-              ))
-            ) : (
-              <p className="text-muted-foreground text-center">
-                No hay detalles para esta pérdida.
-              </p>
+
+                {/* Cantidad */}
+                <div>
+                  <Label className="font-semibold text-foreground">Cantidad</Label>
+                  <p className="text-foreground">{selectedPerdida.detalles.length}</p>
+                </div>
+
+                {/* Precio Unitario */}
+                <div>
+                  <Label className="font-semibold text-foreground">Precio Unitario</Label>
+                  <p className="text-foreground">
+                    C${Number(selectedPerdida.detalles[0].precioCompraUnitario).toFixed(2)}
+                  </p>
+                </div>
+              </div>
             )}
 
             {/*  TOTAL ABAJO */}

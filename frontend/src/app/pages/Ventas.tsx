@@ -30,7 +30,7 @@
  */
 import {
   Plus, Search, ShoppingCart, Minus, Trash2, Loader2, Receipt,
-  ChevronDown, ChevronRight, Ban, AlertTriangle, X, Download, Printer, CheckCircle
+  ChevronDown, ChevronRight, Ban, AlertTriangle, X, Download, Printer, CheckCircle, Package
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -590,7 +590,7 @@ function VentaRow({
         </TableCell>
         <TableCell className="font-medium">#{venta.id}</TableCell>
         <TableCell>{new Date(venta.fecha).toLocaleString()}</TableCell>
-        <TableCell>{venta.usuarioId}</TableCell>
+        <TableCell>{venta.usuarioNombre || venta.usuarioId}</TableCell>
         <TableCell>
           <span
             className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${isAnulada
@@ -692,6 +692,8 @@ export function Ventas() {
 
   // Estados POS
   const [productos, setProductos] = useState<any[]>([]);
+  const [categorias, setCategorias] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [cart, setCart] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -713,6 +715,7 @@ export function Ventas() {
 
   useEffect(() => {
     setSearchTerm("");
+    setSelectedCategory(null);
     fetchInventoryForSale();
     if (activeTab === "historial") {
       fetchVentasHistory();
@@ -722,10 +725,11 @@ export function Ventas() {
   /**
    * Carga y ensambla el catálogo de productos disponibles para el POS.
    *
-   * Ejecuta 3 peticiones en paralelo y las combina:
+   * Ejecuta 4 peticiones en paralelo y las combina:
    *   1. inventarios: Todas las unidades físicas (filtra Estado='Disponible').
    *   2. detalles-entrada: Permite mapear unidad física → producto.
    *   3. productos: Datos del producto (nombre, precio de venta calculado).
+   *   4. categorías: Listado de categorías para organizar el POS.
    *
    * El mapeo multi-clave (`inv.detalle_entrada_id || inv.detalleEntradaId || ...`)
    * es defensivo: cubre las diferentes capitalizaciones que la API puede
@@ -737,10 +741,11 @@ export function Ventas() {
    */
   const fetchInventoryForSale = async () => {
     try {
-      const [invRes, detRes, prodRes] = await Promise.all([
+      const [invRes, detRes, prodRes, catRes] = await Promise.all([
         api.get("/inventario/inventarios/"),
         api.get("/inventario/detalles-entrada/"),
         api.get("/catalogo/productos/"),
+        api.get("/catalogo/categorias/"),
       ]);
 
       const inventarios = Array.isArray(invRes.data.results ?? invRes.data)
@@ -751,6 +756,9 @@ export function Ventas() {
         : [];
       const prods = Array.isArray(prodRes.data.results ?? prodRes.data)
         ? prodRes.data.results ?? prodRes.data
+        : [];
+      const cats = Array.isArray(catRes.data.results ?? catRes.data)
+        ? catRes.data.results ?? catRes.data
         : [];
 
       const dispo = inventarios.filter(
@@ -784,6 +792,7 @@ export function Ventas() {
         .filter((p: any) => p.availableQty > 0);
 
       setProductos(posProducts);
+      setCategorias(cats);
     } catch (e) {
       console.error("Error en fetchInventoryForSale:", e);
       toast.error("Error al sincronizar el inventario.");
@@ -933,9 +942,11 @@ export function Ventas() {
     }
   };
 
-  const filteredProducts = productos.filter((p) =>
-    (p.name || p.nombre || "").toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = productos.filter((p) => {
+    const matchesSearch = (p.name || p.nombre || "").toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === null || p.categoryId === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -972,7 +983,7 @@ export function Ventas() {
           <h1 className="text-2xl font-bold text-foreground">
             Terminal de Ventas
           </h1>
-          <p className="text-muted-foreground">Gestión de salida de productos</p>
+          <p className="text-muted-foreground">Punto de venta y facturación</p>
         </div>
         <div className="flex gap-4 border-b">
           <button
@@ -1000,7 +1011,7 @@ export function Ventas() {
       {activeTab === "pos" && (
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
-            <Card className="p-4 border-0 shadow-sm sticky top-0 z-10">
+            <Card className="p-4 border-0 shadow-sm sticky top-0 z-10 flex flex-col gap-4 bg-card">
               <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-gray-400" />
                 <Input
@@ -1010,26 +1021,67 @@ export function Ventas() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
+
+              {/* Categorías */}
+              <div className="flex gap-2 overflow-x-auto pb-3 pt-1 whitespace-nowrap [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/50">
+                <button
+                  onClick={() => setSelectedCategory(null)}
+                  className={`px-4 py-2 rounded-full text-xs font-bold transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-sm ${selectedCategory === null
+                      ? "bg-gradient-to-r from-green-600 to-emerald-700 text-white shadow-green-200"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
+                >
+                  Todos
+                </button>
+                {categorias.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-sm ${selectedCategory === cat.id
+                        ? "bg-gradient-to-r from-green-600 to-emerald-700 text-white shadow-green-200"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
             </Card>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {filteredProducts.map((p) => (
                 <Card
                   key={p.id}
                   onClick={() => addToCart(p)}
-                  className="p-4 border-0 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group bg-gradient-to-br from-white dark:from-slate-800 to-gray-50 dark:to-slate-900"
+                  className="border-0 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group bg-gradient-to-br from-white dark:from-slate-800 to-gray-50 dark:to-slate-900 overflow-hidden"
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="font-bold text-lg text-foreground">
-                      C${Number(p.salePrice || p.precio_venta).toFixed(2)}
-                    </span>
-                    <span className="text-xs font-semibold bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                      Stock: {p.availableQty}
-                    </span>
+                  {/* Imagen del producto */}
+                  {p.imagen ? (
+                    <div className="w-full h-28 overflow-hidden">
+                      <img
+                        src={p.imagen}
+                        alt={p.name || p.nombre}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full h-28 bg-muted flex items-center justify-center text-muted-foreground">
+                      <Package className="size-10 opacity-40" />
+                    </div>
+                  )}
+                  <div className="p-3">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="font-bold text-base text-foreground">
+                        C${Number(p.salePrice || p.precio_venta).toFixed(2)}
+                      </span>
+                      <span className="text-xs font-semibold bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                        {p.availableQty}
+                      </span>
+                    </div>
+                    <h3 className="font-semibold text-sm text-foreground leading-tight group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors line-clamp-2">
+                      {p.name || p.nombre} {p.presentacion ? `(${p.presentacion})` : ""}
+                    </h3>
                   </div>
-                  <h3 className="font-semibold text-foreground min-h-[40px] leading-tight group-hover:text-green-700 dark:text-green-400 transition-colors">
-                    {p.name || p.nombre} {p.presentacion ? `(${p.presentacion})` : ""}
-                  </h3>
                 </Card>
               ))}
               {filteredProducts.length === 0 && (
@@ -1143,7 +1195,7 @@ export function Ventas() {
                   <TableHead className="w-10" />
                   <TableHead>Factura</TableHead>
                   <TableHead>Fecha</TableHead>
-                  <TableHead>Cajero ID</TableHead>
+                  <TableHead>Cajero</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Monto</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>

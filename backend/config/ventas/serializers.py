@@ -117,6 +117,7 @@ class VentaSerializer(serializers.ModelSerializer):
     """
     id = serializers.IntegerField(source='IdVenta', read_only=True)
     usuarioId = serializers.PrimaryKeyRelatedField(source='IdUsuario', queryset=Usuario.objects.all())
+    usuarioNombre = serializers.CharField(source='IdUsuario.Nombre', read_only=True)
     fecha = serializers.DateTimeField(source='Fecha')
     total = serializers.DecimalField(source='Total', max_digits=12, decimal_places=2)
     # read_only: El estado solo lo cambia la lógica de negocio de AnularVentaView.
@@ -129,4 +130,4 @@ class VentaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Venta
-        fields = ['id', 'usuarioId', 'fecha', 'total', 'estado', 'detalles']
+        fields = ['id', 'usuarioId', 'usuarioNombre', 'fecha', 'total', 'estado', 'detalles']

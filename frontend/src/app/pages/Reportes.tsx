@@ -5,31 +5,32 @@
  * que se pueden consultar, imprimir en PDF y exportar a Excel.
  *
  * ARQUITECTURA DE ESTADO:
- *   Cada reporte tiene su propio par de estados:
- *   - `resultado*`:  Los datos recibidos de la API (array o objeto).
- *   - `loading*`:    Boolean que controla el spinner mientras se carga.
- *   Separar los estados por reporte permite que múltiples reportes muestren
- *   sus datos simultáneamente en la misma página sin interferirse.
+ * Cada reporte tiene su propio par de estados:
+ * - `resultado*`:  Los datos recibidos de la API (array o objeto).
+ * - `loading*`:    Boolean que controla el spinner mientras se carga.
+ * Separar los estados por reporte permite que múltiples reportes muestren
+ * sus datos simultáneamente en la misma página sin interferirse.
  *
  * FLUJO GLOBAL DE FECHAS:
- *   Los estados `fechaInicio` y `fechaFin` son compartidos por la mayoría
- *   de reportes. Se ingresan UNA SOLA VEZ en la barra de "Rango de Fechas
- *   Global" y se reutilizan en cada petición. Esto evita que el usuario
- *   ingrese las mismas fechas repetidamente.
+ * Los estados `fechaInicio` y `fechaFin` son compartidos por la mayoría
+ * de reportes. Se ingresan UNA SOLA VEZ en la barra de "Rango de Fechas
+ * Global" y se reutilizan en cada petición. Esto evita que el usuario
+ * ingrese las mismas fechas repetidamente.
  *
  * TRANSFORMACIÓN DE DATOS — Reporte de Comparación:
- *   La función sp_comparar_ventas() devuelve UNA SOLA FILA con columnas:
- *     { ventas_a, productos_a, ventas_b, productos_b }
- *   El frontend transforma esa fila en MÚLTIPLES FILAS VISUALES para la tabla:
- *     Fila 1: { metrica: 'Ventas Totales',    periodo_a, periodo_b, diferencia }
- *     Fila 2: { metrica: 'Productos Vendidos', periodo_a, periodo_b, diferencia }
- *   La diferencia se calcula aquí (frontend) porque es trivial y evita
- *   modificar la función SQL almacenada.
+ * La función sp_comparar_ventas() devuelve UNA SOLA FILA con columnas:
+ * { ventas_a, productos_a, ventas_b, productos_b }
+ * El frontend transforma esa fila en MÚLTIPLES FILAS VISUALES para la tabla:
+ * Fila 1: { metrica: 'Ventas Totales',   periodo_a, periodo_b, diferencia }
+ * Fila 2: { metrica: 'Productos Vendidos', periodo_a, periodo_b, diferencia }
+ * La diferencia se calcula aquí (frontend) porque es trivial y evita
+ * modificar la función SQL almacenada.
  *
- * MODO IMPRESIÓN:
- *   El estado `imprimiendo` controla la visibilidad de elementos de UI.
- *   Al activarse, oculta filtros y controles, y muestra un header formal
- *   de documento. El CSS `@media print` ajusta colores para impresoras.
+ * MODO IMPRESIÓN Y ENFOQUE:
+ * El estado `seleccionVista` controla qué reporte se está visualizando.
+ * Al ser distinto de "menu", oculta los filtros y muestra solo el reporte activo.
+ * El estado `imprimiendo` controla la visibilidad de elementos de UI.
+ * Al activarse, oculta controles, y muestra un header formal de documento.
  */
 import React, { useState, useEffect } from "react";
 import { Card } from "../components/ui/card";
@@ -56,7 +57,6 @@ export function Reportes() {
   const [proveedoresLista, setProveedoresLista] = useState<any[]>([]);
 
   // ── Rango de fechas GLOBAL compartido por la mayoría de reportes ────────────
-  // Un solo par de fechas para evitar ingresarlas repetidamente
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
 
@@ -65,90 +65,58 @@ export function Reportes() {
   const [productoSeleccionado, setProductoSeleccionado] = useState("");
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState("");
 
-  /** Reporte Gerencial: { total_ventas, promedio_venta, producto_mas_vendido } */
   const [resultadoGerencial, setResultadoGerencial] = useState<any>(null);
   const [loadingGerencial, setLoadingGerencial] = useState(false);
 
-  /** Pivot mensual: una fila con 12 columnas (ene..dic) para el producto seleccionado */
   const [datosPivot, setDatosPivot] = useState<any>(null);
   const [loadingPivot, setLoadingPivot] = useState(false);
 
-  /** Lista de productos activos suministrados por un proveedor */
   const [productosProveedor, setProductosProveedor] = useState<any[]>([]);
   const [loadingProveedor, setLoadingProveedor] = useState(false);
 
-  /** Lista de devoluciones en el rango de fechas */
   const [resultadoDevoluciones, setResultadoDevoluciones] = useState<any[]>([]);
   const [loadingDevoluciones, setLoadingDevoluciones] = useState(false);
 
-  /** Estado para el modo de impresión PDF — oculta controles de UI */
   const [imprimiendo, setImprimiendo] = useState(false);
 
   // ── Reportes avanzados (sp_*) ────────────────────────────────────────────────
-  /** Filtro de estado: '' = todas, 'Completada', 'Anulada' */
   const [estadoVentaFiltrada, setEstadoVentaFiltrada] = useState("");
-  const [resultadoVentasFiltradas, setResultadoVentasFiltradas] = useState<
-    any[]
-  >([]);
+  const [resultadoVentasFiltradas, setResultadoVentasFiltradas] = useState<any[]>([]);
   const [loadingVentasFiltradas, setLoadingVentasFiltradas] = useState(false);
 
   const [limiteTopProductos, setLimiteTopProductos] = useState("10");
   const [resultadoTopProductos, setResultadoTopProductos] = useState<any[]>([]);
   const [loadingTopProductos, setLoadingTopProductos] = useState(false);
 
-  /** '' = todos los productos; un ID = filtrar por producto específico */
   const [productoGananciaId, setProductoGananciaId] = useState("");
-  const [resultadoGananciaProducto, setResultadoGananciaProducto] = useState<
-    any[]
-  >([]);
+  const [resultadoGananciaProducto, setResultadoGananciaProducto] = useState<any[]>([]);
   const [loadingGananciaProducto, setLoadingGananciaProducto] = useState(false);
 
-  /**
-   * Comparación de periodos: 4 fechas independientes (2 por periodo).
-   * Son independientes del rango global porque comparan dos rangos distintos.
-   */
   const [fechaInicioA, setFechaInicioA] = useState("");
   const [fechaFinA, setFechaFinA] = useState("");
   const [fechaInicioB, setFechaInicioB] = useState("");
   const [fechaFinB, setFechaFinB] = useState("");
-  /**
-   * resultadoComparacion: Array TRANSFORMADO en el frontend.
-   * La API devuelve 1 objeto → aquí se convierte en 2+ filas para la tabla.
-   * Ver ejecutarComparacion() para el detalle de la transformación.
-   */
+
   const [resultadoComparacion, setResultadoComparacion] = useState<any[]>([]);
   const [loadingComparacion, setLoadingComparacion] = useState(false);
 
   const [proveedorComprasId, setProveedorComprasId] = useState("");
-  const [resultadoComprasFiltradas, setResultadoComprasFiltradas] = useState<
-    any[]
-  >([]);
+  const [resultadoComprasFiltradas, setResultadoComprasFiltradas] = useState<any[]>([]);
   const [loadingComprasFiltradas, setLoadingComprasFiltradas] = useState(false);
 
   const [diasSinMovimiento, setDiasSinMovimiento] = useState("30");
-  const [resultadoSinMovimiento, setResultadoSinMovimiento] = useState<any[]>(
-    [],
-  );
+  const [resultadoSinMovimiento, setResultadoSinMovimiento] = useState<any[]>([]);
   const [loadingSinMovimiento, setLoadingSinMovimiento] = useState(false);
 
   const [resultadoPerdidas, setResultadoPerdidas] = useState<any[]>([]);
   const [loadingPerdidas, setLoadingPerdidas] = useState(false);
 
   /**
-   * seleccionVista: Controla qué reporte(s) incluir en PDF/Excel.
-   * 'todos' = todos los reportes generados; '1'..'11' = uno específico.
+   * seleccionVista: Controla qué reporte(s) incluir en PDF/Excel y el Modo Enfoque.
+   * 'menu' = Muestra cuadrícula de opciones; '1'..'11' = Muestra reporte específico.
    */
-  const [seleccionVista, setSeleccionVista] = useState<string>("todos");
+  const [seleccionVista, setSeleccionVista] = useState<string>("menu");
 
-  /**
-   * Valida que ambas fechas estén presentes y que inicio <= fin.
-   * Reutilizado por todos los reportes para evitar duplicar la lógica.
-   *
-   * @param inicio - Fecha de inicio en formato YYYY-MM-DD.
-   * @param fin - Fecha de fin en formato YYYY-MM-DD.
-   * @param label - Prefijo opcional para el mensaje de error (ej: 'Periodo A').
-   * @returns true si las fechas son válidas, false si hay un error (muestra toast).
-   */
   const validarFechas = (inicio: string, fin: string, label = ""): boolean => {
     const prefix = label ? `${label}: ` : "";
     if (!inicio || !fin) {
@@ -164,22 +132,6 @@ export function Reportes() {
     return true;
   };
 
-  /**
-   * Efecto de carga inicial de datos maestros.
-   *
-   * Carga productos y proveedores una sola vez al montar el componente.
-   * Ambas peticiones se lanzan en PARALELO con Promise.all() para minimizar
-   * el tiempo de espera (en lugar de hacerlas secuencialmente).
-   *
-   * AbortController: Cancela las peticiones en vuelo si el componente se
-   * desmonta antes de que terminen (ej: el usuario navega a otra página).
-   * Sin esto, el callback del .then() intentaría llamar a setState en un
-   * componente ya desmontado, causando un memory leak.
-   *
-   * `?? prodRes.data ?? []`: La API puede devolver datos paginados
-   * ({ results: [...] }) o directamente un array. El operador nullish coalescing
-   * maneja ambos formatos de forma segura.
-   */
   useEffect(() => {
     const controller = new AbortController();
     const cargarDatos = async () => {
@@ -191,15 +143,13 @@ export function Reportes() {
         setProductosLista(prodRes.data.results ?? prodRes.data ?? []);
         setProveedoresLista(provRes.data.results ?? provRes.data ?? []);
       } catch (e: any) {
-        // CanceledError: Ignorar — es el resultado esperado del abort al desmontar.
         if (e.name !== "CanceledError")
           toast.error("Error al cargar datos maestros");
       }
     };
     cargarDatos();
-    // Función de limpieza: cancela las peticiones al desmontar
     return () => controller.abort();
-  }, []); // [] = solo se ejecuta al montar, no en re-renders
+  }, []);
 
   const ejecutarReporteGerencial = async () => {
     if (!validarFechas(fechaInicio, fechaFin)) return;
@@ -210,6 +160,7 @@ export function Reportes() {
       );
       setResultadoGerencial(data);
       toast.success("Reporte generado con éxito");
+      setSeleccionVista("1");
     } catch (e) {
       toast.error("Error al conectar con el servidor");
     } finally {
@@ -225,25 +176,18 @@ export function Reportes() {
         `/ventas/reporte-pivot/?anio=${anio}&productoId=${productoSeleccionado}`,
       );
       const tieneVentas = [
-        data.ene,
-        data.feb,
-        data.mar,
-        data.abr,
-        data.may,
-        data.jun,
-        data.jul,
-        data.ago,
-        data.sep,
-        data.oct,
-        data.nov,
-        data.dic,
+        data.ene, data.feb, data.mar, data.abr,
+        data.may, data.jun, data.jul, data.ago,
+        data.sep, data.oct, data.nov, data.dic,
       ].some((v) => Number(v) > 0);
+      
       if (!tieneVentas) {
         setDatosPivot(null);
         toast.error("Este producto no tiene ventas registradas");
       } else {
         setDatosPivot(data);
         toast.success("Análisis mensual cargado");
+        setSeleccionVista("2");
       }
     } catch (e) {
       setDatosPivot(null);
@@ -262,12 +206,11 @@ export function Reportes() {
       );
       if (data.length === 0) {
         setProductosProveedor([]);
-        toast.error(
-          "Este proveedor no tiene productos registrados actualmente",
-        );
+        toast.error("Este proveedor no tiene productos registrados actualmente");
       } else {
         setProductosProveedor(data);
         toast.success("Lista de productos cargada");
+        setSeleccionVista("3");
       }
     } catch (e) {
       setProductosProveedor([]);
@@ -290,6 +233,7 @@ export function Reportes() {
       } else {
         setResultadoDevoluciones(data);
         toast.success("Reporte de devoluciones cargado");
+        setSeleccionVista("4");
       }
     } catch (e) {
       setResultadoDevoluciones([]);
@@ -312,6 +256,7 @@ export function Reportes() {
       } else {
         setResultadoPerdidas(data);
         toast.success("Reporte de pérdidas cargado");
+        setSeleccionVista("5");
       }
     } catch (e) {
       setResultadoPerdidas([]);
@@ -329,8 +274,12 @@ export function Reportes() {
         `/ventas/reporte-ventas-filtradas/?inicio=${fechaInicio}&fin=${fechaFin}&estado=${estadoVentaFiltrada}`,
       );
       setResultadoVentasFiltradas(data);
-      if (data.length > 0) toast.success("Ventas filtradas cargadas");
-      else toast.error("Sin resultados para el rango seleccionado");
+      if (data.length > 0) {
+        toast.success("Ventas filtradas cargadas");
+        setSeleccionVista("6");
+      } else {
+        toast.error("Sin resultados para el rango seleccionado");
+      }
     } catch (e) {
       toast.error("Error al obtener ventas filtradas");
     } finally {
@@ -346,8 +295,12 @@ export function Reportes() {
         `/ventas/reporte-top-productos/?inicio=${fechaInicio}&fin=${fechaFin}&limite=${limiteTopProductos}`,
       );
       setResultadoTopProductos(data);
-      if (data.length > 0) toast.success("Top productos cargado");
-      else toast.error("Sin resultados para el rango seleccionado");
+      if (data.length > 0) {
+        toast.success("Top productos cargado");
+        setSeleccionVista("7");
+      } else {
+        toast.error("Sin resultados para el rango seleccionado");
+      }
     } catch (e) {
       toast.error("Error al obtener top productos");
     } finally {
@@ -363,8 +316,12 @@ export function Reportes() {
         `/ventas/reporte-ganancia-producto/?inicio=${fechaInicio}&fin=${fechaFin}&productoId=${productoGananciaId}`,
       );
       setResultadoGananciaProducto(data);
-      if (data.length > 0) toast.success("Ganancias cargadas");
-      else toast.error("Sin resultados para el rango seleccionado");
+      if (data.length > 0) {
+        toast.success("Ganancias cargadas");
+        setSeleccionVista("8");
+      } else {
+        toast.error("Sin resultados para el rango seleccionado");
+      }
     } catch (e) {
       toast.error("Error al obtener ganancias");
     } finally {
@@ -372,32 +329,6 @@ export function Reportes() {
     }
   };
 
-  /**
-   * Ejecuta el reporte de comparación de ventas entre dos periodos.
-   *
-   * TRANSFORMACIÓN CRÍTICA — De "Fila Única" a "Múltiples Filas Visuales":
-   *
-   * La función SQL sp_comparar_ventas() retorna UNA SOLA FILA:
-   *   { ventas_a: 5000, productos_a: 80, ventas_b: 7500, productos_b: 120 }
-   *
-   * El frontend necesita MÚLTIPLES FILAS para la tabla comparativa:
-   *   | Métrica          | Periodo A | Periodo B | Diferencia |
-   *   |------------------|-----------|-----------|------------|
-   *   | Ventas Totales   | C$5,000   | C$7,500   | +C$2,500   |
-   *   | Productos Vendidos | 80      | 120       | +40        |
-   *
-   * Por eso se construye `tablaComparativa`: un array donde cada elemento
-   * es una fila de la tabla, creado a partir de los campos de la fila única.
-   *
-   * La diferencia (periodo_b - periodo_a) se calcula aquí para:
-   *   1. Colorear en verde (positivo) o rojo (negativo) en la tabla.
-   *   2. Mostrar el signo '+' explícitamente si la diferencia es positiva.
-   *   3. Evitar modificar la función SQL almacenada.
-   *
-   * `esMonto`: Flag que indica si el valor debe formatearse con 'C$'.
-   *   true  = dinero (Ventas Totales)
-   *   false = cantidad entera (Productos Vendidos)
-   */
   const ejecutarComparacion = async () => {
     if (!validarFechas(fechaInicioA, fechaFinA, "Periodo A")) return;
     if (!validarFechas(fechaInicioB, fechaFinB, "Periodo B")) return;
@@ -413,30 +344,27 @@ export function Reportes() {
         return;
       }
 
-      // Extraer la única fila devuelta por la API
       const d = res.data[0];
-
-      // Transformar: 1 fila de la API → N filas visuales de la tabla
       const tablaComparativa = [
         {
           metrica: "Ventas Totales",
           periodo_a: Number(d.ventas_a || 0),
           periodo_b: Number(d.ventas_b || 0),
-          // diferencia: positivo = mejora, negativo = caída
           diferencia: Number(d.ventas_b || 0) - Number(d.ventas_a || 0),
-          esMonto: true, // Formatear como C$
+          esMonto: true,
         },
         {
           metrica: "Productos Vendidos",
           periodo_a: Number(d.productos_a || 0),
           periodo_b: Number(d.productos_b || 0),
           diferencia: Number(d.productos_b || 0) - Number(d.productos_a || 0),
-          esMonto: false, // Formatear como número entero
+          esMonto: false,
         },
       ];
 
       setResultadoComparacion(tablaComparativa);
       toast.success("Comparación cargada");
+      setSeleccionVista("9");
     } catch (e) {
       toast.error("Error al obtener comparación");
     } finally {
@@ -452,8 +380,12 @@ export function Reportes() {
         `/inventario/reporte-compras-filtradas/?inicio=${fechaInicio}&fin=${fechaFin}&proveedorId=${proveedorComprasId}`,
       );
       setResultadoComprasFiltradas(data);
-      if (data.length > 0) toast.success("Compras cargadas");
-      else toast.error("Sin resultados para el rango seleccionado");
+      if (data.length > 0) {
+        toast.success("Compras cargadas");
+        setSeleccionVista("10");
+      } else {
+        toast.error("Sin resultados para el rango seleccionado");
+      }
     } catch (e) {
       toast.error("Error al obtener compras");
     } finally {
@@ -468,16 +400,18 @@ export function Reportes() {
         `/inventario/reporte-productos-sin-movimiento/?dias=${diasSinMovimiento}`,
       );
       setResultadoSinMovimiento(data);
-      if (data.length > 0) toast.success("Productos sin movimiento cargados");
-      else toast.error("Sin resultados");
+      if (data.length > 0) {
+        toast.success("Productos sin movimiento cargados");
+        setSeleccionVista("11");
+      } else {
+        toast.error("Sin resultados");
+      }
     } catch (e) {
       toast.error("Error");
     } finally {
       setLoadingSinMovimiento(false);
     }
   };
-
-  //DOCUMENTO DE EXCEL CON EXCELJS
 
   const exportarExcelEstetico = async () => {
     const workbook = new ExcelJS.Workbook();
@@ -494,34 +428,15 @@ export function Reportes() {
     const title = sheet.getCell("A1");
     title.value = "MISCELÁNEA BENDICIÓN DE DIOS - REPORTE";
     title.font = { name: "Arial Black", size: 14, color: { argb: "FFFFFFFF" } };
-    title.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FF1E293B" },
-    };
+    title.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E293B" } };
     title.alignment = { horizontal: "center" };
 
-    if (
-      (seleccionVista === "1" || seleccionVista === "todos") &&
-      resultadoGerencial
-    ) {
+    if ((seleccionVista === "1" || seleccionVista === "todos") && resultadoGerencial) {
       sheet.addRow([]);
       sheet.addRow(["--- REPORTE DE VENTAS ---"]).font = { bold: true };
-      sheet.addRow([
-        "Monto Total Vendido",
-        "",
-        `C$ ${Number(resultadoGerencial.total_ventas).toLocaleString()}`,
-      ]);
-      sheet.addRow([
-        "Promedio de Ventas",
-        "",
-        `C$ ${Number(resultadoGerencial.promedio_venta).toLocaleString()}`,
-      ]);
-      sheet.addRow([
-        "Producto Estrella",
-        "",
-        resultadoGerencial.producto_mas_vendido,
-      ]);
+      sheet.addRow(["Monto Total Vendido", "", `C$ ${Number(resultadoGerencial.total_ventas).toLocaleString()}`]);
+      sheet.addRow(["Promedio de Ventas", "", `C$ ${Number(resultadoGerencial.promedio_venta).toLocaleString()}`]);
+      sheet.addRow(["Producto Estrella", "", resultadoGerencial.producto_mas_vendido]);
     }
 
     if ((seleccionVista === "2" || seleccionVista === "todos") && datosPivot) {
@@ -529,327 +444,110 @@ export function Reportes() {
       sheet.addRow(["--- VENTAS MENSUALES ---"]).font = { bold: true };
       sheet.addRow(["Producto:", datosPivot.producto, ""]);
       const headerMeses = sheet.addRow(["MES", "VENTAS", ""]);
-      headerMeses.eachCell(
-        (c) =>
-        (c.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFDEE2E6" },
-        }),
-      );
-      const meses = [
-        "Enero",
-        "Febrero",
-        "Marzo",
-        "Abril",
-        "Mayo",
-        "Junio",
-        "Julio",
-        "Agosto",
-        "Septiembre",
-        "Octubre",
-        "Noviembre",
-        "Diciembre",
-      ];
-      const valores = [
-        datosPivot.ene,
-        datosPivot.feb,
-        datosPivot.mar,
-        datosPivot.abr,
-        datosPivot.may,
-        datosPivot.jun,
-        datosPivot.jul,
-        datosPivot.ago,
-        datosPivot.sep,
-        datosPivot.oct,
-        datosPivot.nov,
-        datosPivot.dic,
-      ];
+      headerMeses.eachCell((c) => (c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDEE2E6" } }));
+      const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+      const valores = [datosPivot.ene, datosPivot.feb, datosPivot.mar, datosPivot.abr, datosPivot.may, datosPivot.jun, datosPivot.jul, datosPivot.ago, datosPivot.sep, datosPivot.oct, datosPivot.nov, datosPivot.dic];
       meses.forEach((m, i) => {
         sheet.addRow([m, `C$ ${Number(valores[i] || 0).toLocaleString()}`, ""]);
       });
     }
 
-    if (
-      (seleccionVista === "3" || seleccionVista === "todos") &&
-      productosProveedor.length > 0
-    ) {
+    if ((seleccionVista === "3" || seleccionVista === "todos") && productosProveedor.length > 0) {
       sheet.addRow([]);
       sheet.addRow(["--- PRODUCTOS POR PROVEEDOR ---"]).font = { bold: true };
       const header = sheet.addRow(["CÓDIGO", "DESCRIPCIÓN", "EXISTENCIA"]);
-      header.eachCell(
-        (c) =>
-        (c.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFDEE2E6" },
-        }),
-      );
+      header.eachCell((c) => (c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDEE2E6" } }));
       productosProveedor.forEach((p) => {
         sheet.addRow([p.id, p.producto, p.unidades_disponibles + " UNIDADES"]);
       });
     }
 
-    if (
-      (seleccionVista === "4" || seleccionVista === "todos") &&
-      resultadoDevoluciones.length > 0
-    ) {
+    if ((seleccionVista === "4" || seleccionVista === "todos") && resultadoDevoluciones.length > 0) {
       sheet.addRow([]);
       sheet.addRow(["--- REPORTE DE DEVOLUCIONES ---"]).font = { bold: true };
-      const headerDev = sheet.addRow([
-        "ID SOLICITUD",
-        "PRODUCTO",
-        "CANTIDAD",
-        "MOTIVO",
-        "USUARIO",
-        "FECHA",
-        "ESTADO",
-      ]);
-      headerDev.eachCell(
-        (c) =>
-        (c.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFDEE2E6" },
-        }),
-      );
+      const headerDev = sheet.addRow(["ID SOLICITUD", "PRODUCTO", "CANTIDAD", "MOTIVO", "USUARIO", "FECHA", "ESTADO"]);
+      headerDev.eachCell((c) => (c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDEE2E6" } }));
       resultadoDevoluciones.forEach((d) => {
-        const d_fecha = new Date(d.fecha);
-        // add timezone offset back if needed, assuming the server returns YYYY-MM-DD
-        sheet.addRow([
-          d.id_solicitud,
-          d.producto,
-          d.cantidad,
-          d.motivo || "N/A",
-          d.usuario || "N/A",
-          d_fecha.toLocaleDateString("es-NI", { timeZone: "UTC" }),
-          d.estado,
-        ]);
+        sheet.addRow([d.id_solicitud, d.producto, d.cantidad, d.motivo || "N/A", d.usuario || "N/A", new Date(d.fecha).toLocaleDateString("es-NI", { timeZone: "UTC" }), d.estado]);
       });
     }
 
-    if (
-      (seleccionVista === "5" || seleccionVista === "todos") &&
-      resultadoPerdidas.length > 0
-    ) {
+    if ((seleccionVista === "5" || seleccionVista === "todos") && resultadoPerdidas.length > 0) {
       sheet.addRow([]);
       sheet.addRow(["--- REPORTE DE PÉRDIDAS ---"]).font = { bold: true };
-      const headerPerd = sheet.addRow([
-        "ID",
-        "PRODUCTO",
-        "CANTIDAD",
-        "MOTIVO",
-        "FECHA",
-        "TOTAL",
-      ]);
-      headerPerd.eachCell(
-        (c) =>
-        (c.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFDEE2E6" },
-        }),
-      );
+      const headerPerd = sheet.addRow(["ID", "PRODUCTO", "CANTIDAD", "MOTIVO", "FECHA", "TOTAL"]);
+      headerPerd.eachCell((c) => (c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDEE2E6" } }));
       resultadoPerdidas.forEach((d) => {
-        sheet.addRow([
-          d.id_perdida,
-          d.producto,
-          d.cantidad,
-          d.motivo,
-          new Date(d.fecha).toLocaleDateString("es-NI", { timeZone: "UTC" }),
-          `C$ ${Number(d.total).toLocaleString()}`,
-        ]);
+        sheet.addRow([d.id_perdida, d.producto, d.cantidad, d.motivo, new Date(d.fecha).toLocaleDateString("es-NI", { timeZone: "UTC" }), `C$ ${Number(d.total).toLocaleString()}`]);
       });
     }
 
-    if (
-      (seleccionVista === "6" || seleccionVista === "todos") &&
-      resultadoVentasFiltradas.length > 0
-    ) {
+    if ((seleccionVista === "6" || seleccionVista === "todos") && resultadoVentasFiltradas.length > 0) {
       sheet.addRow([]);
       sheet.addRow(["--- VENTAS FILTRADAS ---"]).font = { bold: true };
       const headerVF = sheet.addRow(["ID VENTA", "FECHA", "ESTADO", "TOTAL"]);
-      headerVF.eachCell(
-        (c) =>
-        (c.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFDEE2E6" },
-        }),
-      );
+      headerVF.eachCell((c) => (c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDEE2E6" } }));
       resultadoVentasFiltradas.forEach((d) => {
-        sheet.addRow([
-          d.id_venta,
-          new Date(d.fecha).toLocaleDateString("es-NI"),
-          d.estado,
-          `C$ ${Number(d.total).toLocaleString()}`,
-        ]);
+        sheet.addRow([d.id_venta, new Date(d.fecha).toLocaleDateString("es-NI"), d.estado, `C$ ${Number(d.total).toLocaleString()}`]);
       });
     }
 
-    if (
-      (seleccionVista === "7" || seleccionVista === "todos") &&
-      resultadoTopProductos.length > 0
-    ) {
+    if ((seleccionVista === "7" || seleccionVista === "todos") && resultadoTopProductos.length > 0) {
       sheet.addRow([]);
       sheet.addRow(["--- TOP PRODUCTOS ---"]).font = { bold: true };
-      const headerTP = sheet.addRow([
-        "PRODUCTO",
-        "CATEGORÍA",
-        "VENDIDOS",
-        "INGRESO BRUTO",
-      ]);
-      headerTP.eachCell(
-        (c) =>
-        (c.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFDEE2E6" },
-        }),
-      );
+      const headerTP = sheet.addRow(["PRODUCTO", "CATEGORÍA", "VENDIDOS", "INGRESO BRUTO"]);
+      headerTP.eachCell((c) => (c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDEE2E6" } }));
       resultadoTopProductos.forEach((d) => {
-        sheet.addRow([
-          d.nombre_producto,
-          d.categoria,
-          d.cantidad_vendida,
-          `C$ ${Number(d.ingreso_bruto).toLocaleString()}`,
-        ]);
+        sheet.addRow([d.nombre_producto, d.categoria, d.cantidad_vendida, `C$ ${Number(d.ingreso_bruto).toLocaleString()}`]);
       });
     }
 
-    if (
-      (seleccionVista === "8" || seleccionVista === "todos") &&
-      resultadoGananciaProducto.length > 0
-    ) {
+    if ((seleccionVista === "8" || seleccionVista === "todos") && resultadoGananciaProducto.length > 0) {
       sheet.addRow([]);
       sheet.addRow(["--- GANANCIA POR PRODUCTO ---"]).font = { bold: true };
-      const headerGP = sheet.addRow([
-        "PRODUCTO",
-        "TOTAL VENTAS",
-        "COSTO TOTAL",
-        "GANANCIA BRUTA",
-      ]);
-      headerGP.eachCell(
-        (c) =>
-        (c.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFDEE2E6" },
-        }),
-      );
+      const headerGP = sheet.addRow(["PRODUCTO", "TOTAL VENTAS", "COSTO TOTAL", "GANANCIA BRUTA"]);
+      headerGP.eachCell((c) => (c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDEE2E6" } }));
       resultadoGananciaProducto.forEach((d) => {
-        sheet.addRow([
-          d.nombre_producto,
-          `C$ ${Number(d.total_ventas).toLocaleString()}`,
-          `C$ ${Number(d.costo_total).toLocaleString()}`,
-          `C$ ${Number(d.ganancia_bruta).toLocaleString()}`,
-        ]);
+        sheet.addRow([d.nombre_producto, `C$ ${Number(d.total_ventas).toLocaleString()}`, `C$ ${Number(d.costo_total).toLocaleString()}`, `C$ ${Number(d.ganancia_bruta).toLocaleString()}`]);
       });
     }
 
-    if (
-      (seleccionVista === "9" || seleccionVista === "todos") &&
-      resultadoComparacion.length > 0
-    ) {
+    if ((seleccionVista === "9" || seleccionVista === "todos") && resultadoComparacion.length > 0) {
       sheet.addRow([]);
       sheet.addRow(["--- COMPARACIÓN DE PERIODOS ---"]).font = { bold: true };
-      const headerComp = sheet.addRow([
-        "MÉTRICA",
-        "PERIODO A",
-        "PERIODO B",
-        "DIFERENCIA",
-      ]);
-      headerComp.eachCell(
-        (c) =>
-        (c.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFDEE2E6" },
-        }),
-      );
+      const headerComp = sheet.addRow(["MÉTRICA", "PERIODO A", "PERIODO B", "DIFERENCIA"]);
+      headerComp.eachCell((c) => (c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDEE2E6" } }));
       resultadoComparacion.forEach((d) => {
-        sheet.addRow([
-          d.metrica,
-          `C$ ${Number(d.valor_a || 0).toLocaleString()}`,
-          `C$ ${Number(d.valor_b || 0).toLocaleString()}`,
-          d.diferencia,
-        ]);
+        sheet.addRow([d.metrica, `C$ ${Number(d.valor_a || 0).toLocaleString()}`, `C$ ${Number(d.valor_b || 0).toLocaleString()}`, d.diferencia]);
       });
     }
 
-    if (
-      (seleccionVista === "10" || seleccionVista === "todos") &&
-      resultadoComprasFiltradas.length > 0
-    ) {
+    if ((seleccionVista === "10" || seleccionVista === "todos") && resultadoComprasFiltradas.length > 0) {
       sheet.addRow([]);
       sheet.addRow(["--- COMPRAS FILTRADAS ---"]).font = { bold: true };
-      const headerCF = sheet.addRow([
-        "ID COMPRA",
-        "FECHA",
-        "PROVEEDOR",
-        "TOTAL COMPRA",
-      ]);
-      headerCF.eachCell(
-        (c) =>
-        (c.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFDEE2E6" },
-        }),
-      );
+      const headerCF = sheet.addRow(["ID COMPRA", "FECHA", "PROVEEDOR", "TOTAL COMPRA"]);
+      headerCF.eachCell((c) => (c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDEE2E6" } }));
       resultadoComprasFiltradas.forEach((d) => {
-        sheet.addRow([
-          d.id_entrada,
-          new Date(d.fecha_ingreso).toLocaleDateString("es-NI"),
-          d.nombre_proveedor,
-          `C$ ${Number(d.total_compra).toLocaleString()}`,
-        ]);
+        sheet.addRow([d.id_entrada, new Date(d.fecha_ingreso).toLocaleDateString("es-NI"), d.nombre_proveedor, `C$ ${Number(d.total_compra).toLocaleString()}`]);
       });
     }
 
-    if (
-      (seleccionVista === "11" || seleccionVista === "todos") &&
-      resultadoSinMovimiento.length > 0
-    ) {
+    if ((seleccionVista === "11" || seleccionVista === "todos") && resultadoSinMovimiento.length > 0) {
       sheet.addRow([]);
       sheet.addRow(["--- PRODUCTOS SIN MOVIMIENTO ---"]).font = { bold: true };
-      const headerSM = sheet.addRow([
-        "PRODUCTO",
-        "CATEGORÍA",
-        "STOCK ACTUAL",
-        "DÍAS SIN VENDER",
-      ]);
-      headerSM.eachCell(
-        (c) =>
-        (c.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFDEE2E6" },
-        }),
-      );
+      const headerSM = sheet.addRow(["PRODUCTO", "CATEGORÍA", "STOCK ACTUAL", "DÍAS SIN VENDER"]);
+      headerSM.eachCell((c) => (c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDEE2E6" } }));
       resultadoSinMovimiento.forEach((d) => {
-        sheet.addRow([
-          d.nombre_producto,
-          d.categoria,
-          `${d.stock_actual} unidades`,
-          `${d.dias_sin_venta} días`,
-        ]);
+        sheet.addRow([d.nombre_producto, d.categoria, `${d.stock_actual} unidades`, `${d.dias_sin_venta} días`]);
       });
     }
 
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(
-      new Blob([buffer]),
-      `Reporte_Miscelanea_BendicionDeDios_${new Date().getTime()}.xlsx`,
-    );
+    saveAs(new Blob([buffer]), `Reporte_Miscelanea_BendicionDeDios_${new Date().getTime()}.xlsx`);
   };
 
-  /**
-   * Determina si hay datos suficientes para generar el PDF/Excel.
-   * Evalúa si el reporte seleccionado tiene datos cargados.
-   * Impedir imprimir una página en blanco mejora la experiencia del usuario.
-   */
   const puedeImprimir = () => {
+    if (seleccionVista === "menu") return false;
     if (seleccionVista === "todos") {
       return (
         !!resultadoGerencial ||
@@ -879,29 +577,21 @@ export function Reportes() {
     return false;
   };
 
-  /**
-   * Activa el modo impresión y lanza el diálogo de impresión del navegador.
-   *
-   * setTimeout(200ms): Da tiempo al React para re-renderizar con `imprimiendo=true`
-   * (ocultando filtros y mostrando el header formal) ANTES de que window.print()
-   * capture el estado visual de la página.
-   * Sin este delay, la UI aún mostraría los controles en el PDF.
-   */
   const handleImprimirPDF = () => {
     if (!puedeImprimir()) {
       toast.error("Debe generar el reporte antes, para generar el PDF.");
       return;
     }
     setImprimiendo(true);
-    const wasDark = document.documentElement.classList.contains('dark');
+    const wasDark = document.documentElement.classList.contains("dark");
     if (wasDark) {
-      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.remove("dark");
     }
     setTimeout(() => {
       window.print();
       setImprimiendo(false);
       if (wasDark) {
-        document.documentElement.classList.add('dark');
+        document.documentElement.classList.add("dark");
       }
     }, 200);
   };
@@ -947,8 +637,31 @@ export function Reportes() {
         </div>
       )}
 
+      {/* BARRA DE ACCIONES DEL REPORTE ACTIVO (MODO ENFOQUE) */}
+      {!imprimiendo && seleccionVista !== "menu" && (
+        <div className="bg-slate-900 dark:bg-slate-950 text-white rounded-2xl p-4 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4">
+          <Button
+            variant="ghost"
+            onClick={() => setSeleccionVista("menu")}
+            className="hover:bg-slate-800 text-slate-300 hover:text-white font-bold"
+          >
+            <Undo2 className="size-5 mr-2" />
+            Volver a los reportes
+          </Button>
+          
+          <div className="flex gap-3">
+            <Button onClick={handleImprimirPDF} className="bg-slate-700 hover:bg-slate-600 font-bold text-xs shadow-md">
+              <Printer size={16} className="mr-2" /> Imprimir PDF
+            </Button>
+            <Button onClick={exportarExcelEstetico} className="bg-green-600 hover:bg-green-700 font-bold text-xs shadow-md">
+              <FileSpreadsheet size={16} className="mr-2" /> Exportar Excel
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* BARRA DE FECHAS GLOBAL */}
-      {!imprimiendo && (
+      {!imprimiendo && seleccionVista === "menu" && (
         <Card className="p-4 bg-card border border-border shadow-sm">
           <div className="flex flex-col md:flex-row items-center gap-4">
             <div className="flex items-center gap-2 text-foreground font-black text-sm uppercase tracking-wider">
@@ -989,58 +702,11 @@ export function Reportes() {
         </Card>
       )}
 
-      {/* PANEL DE SELECCIÓN (LA PREGUNTA) */}
-      {!imprimiendo && (
-        <Card className="p-4 bg-slate-800 text-white dark:bg-slate-900 shadow-xl border-none">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-3">
-              <CheckCircle2 className="text-green-500" size={24} />
-              <p className="font-bold text-sm uppercase tracking-wider">
-                ¿Qué desea incluir en el documento?
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <select
-                value={seleccionVista}
-                onChange={(e: any) => setSeleccionVista(e.target.value)}
-                className="bg-slate-700 text-white text-xs font-bold p-2 rounded-lg outline-none dark:bg-slate-800 dark:text-white border border-slate-600 cursor-pointer"
-              >
-                <option value="todos">Mostrar Todo</option>
-                <option value="1">Reporte de Ventas</option>
-                <option value="2">Ventas Mensuales</option>
-                <option value="3">Productos del Proveedor</option>
-                <option value="4">Devoluciones</option>
-                <option value="5">Pérdidas</option>
-                <option value="6">Ventas Filtradas</option>
-                <option value="7">Top Productos</option>
-                <option value="8">Ganancia Producto</option>
-                <option value="9">Comparación Periodos</option>
-                <option value="10">Compras Filtradas</option>
-                <option value="11">Sin Movimiento</option>
-              </select>
-
-              <Button
-                onClick={handleImprimirPDF}
-                className="bg-card text-foreground hover:bg-slate-200 font-black text-xs"
-              >
-                <Printer size={16} className="mr-2" /> PDF
-              </Button>
-              <Button
-                onClick={exportarExcelEstetico}
-                className="bg-green-600 hover:bg-green-700 text-white font-black text-xs"
-              >
-                <FileSpreadsheet size={16} className="mr-2" /> DOCUMENTO EXCEL
-              </Button>
-            </div>
-          </div>
-        </Card>
-      )}
-
       {/* SECCIÓN DE FILTROS */}
-      {!imprimiendo && (
-        <div className="grid lg:grid-cols-4 md:grid-cols-2 gap-6">
-          <Card className="p-6 space-y-4 border-t-4 border-green-600 shadow-lg bg-card">
-            <div className="flex items-center gap-2 font-bold text-green-700 dark:text-green-400">
+      {!imprimiendo && seleccionVista === "menu" && (
+        <div className="grid lg:grid-cols-4 md:grid-cols-2 gap-6 animate-in fade-in zoom-in-95 duration-300">
+          <Card className="p-6 space-y-4 border-t-4 border-blue-600 shadow-lg bg-card">
+            <div className="flex items-center gap-2 font-bold text-blue-700 dark:text-blue-400">
               <TrendingUp size={24} />{" "}
               <h3 className="truncate">Reporte de Ventas</h3>
             </div>
@@ -1049,13 +715,9 @@ export function Reportes() {
             </p>
             <Button
               onClick={ejecutarReporteGerencial}
-              className="w-full bg-green-700 hover:bg-green-800 text-white font-bold uppercase tracking-widest"
+              className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold uppercase tracking-widest"
             >
-              {loadingGerencial ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                "Generar"
-              )}
+              {loadingGerencial ? <Loader2 className="animate-spin" /> : "Generar"}
             </Button>
           </Card>
 
@@ -1084,13 +746,13 @@ export function Reportes() {
             </Button>
           </Card>
 
-          <Card className="p-6 space-y-4 border-t-4 border-purple-600 shadow-lg bg-card">
-            <div className="flex items-center gap-2 font-bold text-purple-700 dark:text-purple-400">
+          <Card className="p-6 space-y-4 border-t-4 border-blue-600 shadow-lg bg-card">
+            <div className="flex items-center gap-2 font-bold text-blue-700 dark:text-blue-400">
               <Users size={24} />{" "}
               <h3 className="truncate">Productos del Proveedor</h3>
             </div>
             <select
-              className="w-full p-2 border rounded text-sm outline-none dark:bg-slate-800 dark:text-white focus:border-purple-500"
+              className="w-full p-2 border rounded text-sm outline-none dark:bg-slate-800 dark:text-white focus:border-blue-500"
               value={proveedorSeleccionado}
               onChange={(e) => setProveedorSeleccionado(e.target.value)}
             >
@@ -1103,18 +765,14 @@ export function Reportes() {
             </select>
             <Button
               onClick={ejecutarReporteProveedor}
-              className="w-full bg-purple-700 text-white font-bold uppercase tracking-widest"
+              className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold uppercase tracking-widest"
             >
-              {loadingProveedor ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                "Listar"
-              )}
+              {loadingProveedor ? <Loader2 className="animate-spin" /> : "Listar"}
             </Button>
           </Card>
 
-          <Card className="p-6 space-y-4 border-t-4 border-orange-600 shadow-lg bg-card">
-            <div className="flex items-center gap-2 font-bold text-orange-700 dark:text-orange-400">
+          <Card className="p-6 space-y-4 border-t-4 border-blue-600 shadow-lg bg-card">
+            <div className="flex items-center gap-2 font-bold text-blue-700 dark:text-blue-400">
               <Undo2 size={24} /> <h3 className="truncate">Devoluciones</h3>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -1122,19 +780,14 @@ export function Reportes() {
             </p>
             <Button
               onClick={ejecutarReporteDevoluciones}
-              className="w-full bg-orange-700 hover:bg-orange-800 text-white font-bold uppercase tracking-widest"
+              className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold uppercase tracking-widest"
             >
-              {loadingDevoluciones ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                "Generar"
-              )}
+              {loadingDevoluciones ? <Loader2 className="animate-spin" /> : "Generar"}
             </Button>
           </Card>
 
-          {/* PERDIDAS */}
-          <Card className="p-6 space-y-4 border-t-4 border-red-600 shadow-lg bg-card">
-            <div className="flex items-center gap-2 font-bold text-red-700 dark:text-red-400">
+          <Card className="p-6 space-y-4 border-t-4 border-blue-600 shadow-lg bg-card">
+            <div className="flex items-center gap-2 font-bold text-blue-700 dark:text-blue-400">
               <Undo2 size={24} /> <h3 className="truncate">Pérdidas</h3>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -1142,24 +795,19 @@ export function Reportes() {
             </p>
             <Button
               onClick={ejecutarReportePerdidas}
-              className="w-full bg-red-700 hover:bg-red-800 text-white font-bold uppercase tracking-widest"
+              className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold uppercase tracking-widest"
             >
-              {loadingPerdidas ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                "Generar"
-              )}
+              {loadingPerdidas ? <Loader2 className="animate-spin" /> : "Generar"}
             </Button>
           </Card>
 
-          {/* VENTAS FILTRADAS */}
-          <Card className="p-6 space-y-4 border-t-4 border-green-600 shadow-lg bg-card">
-            <div className="flex items-center gap-2 font-bold text-green-700 dark:text-green-400">
+          <Card className="p-6 space-y-4 border-t-4 border-blue-600 shadow-lg bg-card">
+            <div className="flex items-center gap-2 font-bold text-blue-700 dark:text-blue-400">
               <TrendingUp size={24} />{" "}
               <h3 className="truncate">Ventas Filtradas</h3>
             </div>
             <select
-              className="w-full p-2 border rounded text-sm outline-none dark:bg-slate-800 dark:text-white focus:border-green-500"
+              className="w-full p-2 border rounded text-sm outline-none dark:bg-slate-800 dark:text-white focus:border-blue-500"
               value={estadoVentaFiltrada}
               onChange={(e) => setEstadoVentaFiltrada(e.target.value)}
             >
@@ -1169,17 +817,12 @@ export function Reportes() {
             </select>
             <Button
               onClick={ejecutarVentasFiltradas}
-              className="w-full bg-green-700 hover:bg-green-800 text-white font-bold uppercase tracking-widest"
+              className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold uppercase tracking-widest"
             >
-              {loadingVentasFiltradas ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                "Generar"
-              )}
+              {loadingVentasFiltradas ? <Loader2 className="animate-spin" /> : "Generar"}
             </Button>
           </Card>
 
-          {/* TOP PRODUCTOS */}
           <Card className="p-6 space-y-4 border-t-4 border-blue-600 shadow-lg bg-card">
             <div className="flex items-center gap-2 font-bold text-blue-700 dark:text-blue-400">
               <Package size={24} /> <h3 className="truncate">Top Productos</h3>
@@ -1195,22 +838,17 @@ export function Reportes() {
               onClick={ejecutarTopProductos}
               className="w-full bg-blue-700 text-white font-bold uppercase tracking-widest"
             >
-              {loadingTopProductos ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                "Analizar"
-              )}
+              {loadingTopProductos ? <Loader2 className="animate-spin" /> : "Analizar"}
             </Button>
           </Card>
 
-          {/* GANANCIA POR PRODUCTO */}
-          <Card className="p-6 space-y-4 border-t-4 border-purple-600 shadow-lg bg-card">
-            <div className="flex items-center gap-2 font-bold text-purple-700 dark:text-purple-400">
+          <Card className="p-6 space-y-4 border-t-4 border-blue-600 shadow-lg bg-card">
+            <div className="flex items-center gap-2 font-bold text-blue-700 dark:text-blue-400">
               <TrendingUp size={24} />{" "}
               <h3 className="truncate">Ganancia Producto</h3>
             </div>
             <select
-              className="w-full p-2 border rounded text-sm outline-none dark:bg-slate-800 dark:text-white focus:border-purple-500"
+              className="w-full p-2 border rounded text-sm outline-none dark:bg-slate-800 dark:text-white focus:border-blue-500"
               value={productoGananciaId}
               onChange={(e) => setProductoGananciaId(e.target.value)}
             >
@@ -1223,24 +861,19 @@ export function Reportes() {
             </select>
             <Button
               onClick={ejecutarGananciaProducto}
-              className="w-full bg-purple-700 text-white font-bold uppercase tracking-widest"
+              className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold uppercase tracking-widest"
             >
-              {loadingGananciaProducto ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                "Generar"
-              )}
+              {loadingGananciaProducto ? <Loader2 className="animate-spin" /> : "Generar"}
             </Button>
           </Card>
 
-          {/* COMPRAS FILTRADAS */}
-          <Card className="p-6 space-y-4 border-t-4 border-teal-600 shadow-lg bg-card">
-            <div className="flex items-center gap-2 font-bold text-teal-700 dark:text-teal-400">
+          <Card className="p-6 space-y-4 border-t-4 border-blue-600 shadow-lg bg-card">
+            <div className="flex items-center gap-2 font-bold text-blue-700 dark:text-blue-400">
               <Package size={24} />{" "}
               <h3 className="truncate">Compras Filtradas</h3>
             </div>
             <select
-              className="w-full p-2 border rounded text-sm outline-none dark:bg-slate-800 dark:text-white focus:border-teal-500"
+              className="w-full p-2 border rounded text-sm outline-none dark:bg-slate-800 dark:text-white focus:border-blue-500"
               value={proveedorComprasId}
               onChange={(e) => setProveedorComprasId(e.target.value)}
             >
@@ -1253,71 +886,61 @@ export function Reportes() {
             </select>
             <Button
               onClick={ejecutarComprasFiltradas}
-              className="w-full bg-teal-700 text-white font-bold uppercase tracking-widest"
+              className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold uppercase tracking-widest"
             >
-              {loadingComprasFiltradas ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                "Generar"
-              )}
+              {loadingComprasFiltradas ? <Loader2 className="animate-spin" /> : "Generar"}
             </Button>
           </Card>
 
-          {/* PRODUCTOS SIN MOVIMIENTO */}
-          <Card className="p-6 space-y-4 border-t-4 border-gray-600 shadow-lg bg-card">
-            <div className="flex items-center gap-2 font-bold text-foreground">
+          <Card className="p-6 space-y-4 border-t-4 border-blue-600 shadow-lg bg-card">
+            <div className="flex items-center gap-2 font-bold text-blue-700 dark:text-blue-400">
               <Package size={24} /> <h3 className="truncate">Sin Movimiento</h3>
             </div>
             <input
               type="number"
-              className="p-2 border rounded text-sm w-full outline-none dark:bg-slate-800 dark:text-white focus:border-gray-500"
+              className="p-2 border rounded text-sm w-full outline-none dark:bg-slate-800 dark:text-white focus:border-blue-500"
               placeholder="Días (ej: 30)"
               value={diasSinMovimiento}
               onChange={(e) => setDiasSinMovimiento(e.target.value)}
             />
             <Button
               onClick={ejecutarSinMovimiento}
-              className="w-full bg-gray-700 text-white font-bold uppercase tracking-widest"
+              className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold uppercase tracking-widest"
             >
-              {loadingSinMovimiento ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                "Analizar"
-              )}
+              {loadingSinMovimiento ? <Loader2 className="animate-spin" /> : "Analizar"}
             </Button>
           </Card>
 
-          {/* COMPARACION VENTAS */}
-          <Card className="p-6 space-y-4 border-t-4 border-indigo-600 shadow-lg bg-card lg:col-span-2">
-            <div className="flex items-center gap-2 font-bold text-indigo-700 dark:text-indigo-400">
+          <Card className="p-6 space-y-4 border-t-4 border-blue-600 shadow-lg bg-card lg:col-span-2">
+            <div className="flex items-center gap-2 font-bold text-blue-700 dark:text-blue-400">
               <TrendingUp size={24} />{" "}
               <h3 className="truncate">Comparación Periodos</h3>
             </div>
             <div className="grid grid-cols-4 gap-2">
               <input
                 type="date"
-                className="p-2 border rounded text-xs w-full outline-none dark:bg-slate-800 dark:text-white"
+                className="p-2 border rounded text-xs w-full outline-none dark:bg-slate-800 dark:text-white focus:border-blue-500"
                 value={fechaInicioA}
                 onChange={(e) => setFechaInicioA(e.target.value)}
                 title="Inicio A"
               />
               <input
                 type="date"
-                className="p-2 border rounded text-xs w-full outline-none dark:bg-slate-800 dark:text-white"
+                className="p-2 border rounded text-xs w-full outline-none dark:bg-slate-800 dark:text-white focus:border-blue-500"
                 value={fechaFinA}
                 onChange={(e) => setFechaFinA(e.target.value)}
                 title="Fin A"
               />
               <input
                 type="date"
-                className="p-2 border rounded text-xs w-full outline-none dark:bg-slate-800 dark:text-white"
+                className="p-2 border rounded text-xs w-full outline-none dark:bg-slate-800 dark:text-white focus:border-blue-500"
                 value={fechaInicioB}
                 onChange={(e) => setFechaInicioB(e.target.value)}
                 title="Inicio B"
               />
               <input
                 type="date"
-                className="p-2 border rounded text-xs w-full outline-none dark:bg-slate-800 dark:text-white"
+                className="p-2 border rounded text-xs w-full outline-none dark:bg-slate-800 dark:text-white focus:border-blue-500"
                 value={fechaFinB}
                 onChange={(e) => setFechaFinB(e.target.value)}
                 title="Fin B"
@@ -1325,13 +948,9 @@ export function Reportes() {
             </div>
             <Button
               onClick={ejecutarComparacion}
-              className="w-full bg-indigo-700 text-white font-bold uppercase tracking-widest"
+              className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold uppercase tracking-widest"
             >
-              {loadingComparacion ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                "Comparar"
-              )}
+              {loadingComparacion ? <Loader2 className="animate-spin" /> : "Comparar"}
             </Button>
           </Card>
         </div>
@@ -1339,12 +958,10 @@ export function Reportes() {
 
       {/* ÁREA DE RESULTADOS DINÁMICOS */}
       <div
-        className={`mt-12 ${imprimiendo ? "block space-y-8 pb-0" : "flex flex-col gap-12 pb-32"}`}
+        className={`mt-12 ${imprimiendo ? "block space-y-8 pb-0" : "flex flex-col gap-12 pb-32 animate-in fade-in slide-in-from-bottom-8"}`}
       >
         {resultadoGerencial &&
-          (!imprimiendo ||
-            seleccionVista === "1" ||
-            seleccionVista === "todos") && (
+          (seleccionVista === "1" || seleccionVista === "todos") && (
             <Card
               className={`p-6 border-l-8 border-green-500 bg-card ${imprimiendo ? "border shadow-none block" : "shadow-xl"} print:break-inside-avoid`}
             >
@@ -1393,9 +1010,7 @@ export function Reportes() {
           )}
 
         {datosPivot &&
-          (!imprimiendo ||
-            seleccionVista === "2" ||
-            seleccionVista === "todos") && (
+          (seleccionVista === "2" || seleccionVista === "todos") && (
             <Card
               className={`p-8 border-0 bg-card relative ${imprimiendo ? "border border-border shadow-none p-6 block overflow-visible" : "shadow-2xl overflow-hidden"} print:break-inside-avoid`}
             >
@@ -1408,18 +1023,8 @@ export function Reportes() {
                   <thead className="bg-muted uppercase font-black text-[11px] text-muted-foreground border-b print:bg-slate-100 dark:bg-slate-800 print:text-foreground">
                     <tr>
                       {[
-                        "Ene",
-                        "Feb",
-                        "Mar",
-                        "Abr",
-                        "May",
-                        "Jun",
-                        "Jul",
-                        "Ago",
-                        "Sep",
-                        "Oct",
-                        "Nov",
-                        "Dic",
+                        "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+                        "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
                       ].map((m) => (
                         <th
                           key={m}
@@ -1433,18 +1038,9 @@ export function Reportes() {
                   <tbody className="text-sm">
                     <tr>
                       {[
-                        datosPivot.ene,
-                        datosPivot.feb,
-                        datosPivot.mar,
-                        datosPivot.abr,
-                        datosPivot.may,
-                        datosPivot.jun,
-                        datosPivot.jul,
-                        datosPivot.ago,
-                        datosPivot.sep,
-                        datosPivot.oct,
-                        datosPivot.nov,
-                        datosPivot.dic,
+                        datosPivot.ene, datosPivot.feb, datosPivot.mar, datosPivot.abr,
+                        datosPivot.may, datosPivot.jun, datosPivot.jul, datosPivot.ago,
+                        datosPivot.sep, datosPivot.oct, datosPivot.nov, datosPivot.dic,
                       ].map((v, i) => (
                         <td
                           key={i}
@@ -1461,9 +1057,7 @@ export function Reportes() {
           )}
 
         {productosProveedor.length > 0 &&
-          (!imprimiendo ||
-            seleccionVista === "3" ||
-            seleccionVista === "todos") && (
+          (seleccionVista === "3" || seleccionVista === "todos") && (
             <Card
               className={`p-8 border-0 bg-card relative ${imprimiendo ? "border border-border shadow-none p-6 block overflow-visible" : "shadow-2xl overflow-hidden"}`}
             >
@@ -1480,12 +1074,8 @@ export function Reportes() {
                   <thead className="bg-muted border-b text-[12px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest print:bg-slate-100 dark:bg-slate-800 print:text-foreground print:border-slate-300 dark:border-slate-600">
                     <tr>
                       <th className="p-6 print:p-3">Cód.</th>
-                      <th className="p-6 print:p-3">
-                        Descripción del Artículo
-                      </th>
-                      <th className="p-6 print:p-3 text-center">
-                        Existencia Real
-                      </th>
+                      <th className="p-6 print:p-3">Descripción del Artículo</th>
+                      <th className="p-6 print:p-3 text-center">Existencia Real</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 print:divide-slate-200">
@@ -1513,9 +1103,7 @@ export function Reportes() {
           )}
 
         {resultadoDevoluciones.length > 0 &&
-          (!imprimiendo ||
-            seleccionVista === "4" ||
-            seleccionVista === "todos") && (
+          (seleccionVista === "4" || seleccionVista === "todos") && (
             <Card
               className={`p-8 border-0 bg-card relative ${imprimiendo ? "border border-border shadow-none p-6 block overflow-visible" : "shadow-2xl overflow-hidden"}`}
             >
@@ -1575,9 +1163,7 @@ export function Reportes() {
           )}
 
         {resultadoPerdidas.length > 0 &&
-          (!imprimiendo ||
-            seleccionVista === "5" ||
-            seleccionVista === "todos") && (
+          (seleccionVista === "5" || seleccionVista === "todos") && (
             <Card
               className={`p-8 border-0 bg-card relative ${imprimiendo ? "border border-border shadow-none p-6 block overflow-visible" : "shadow-2xl overflow-hidden"} print:break-inside-avoid`}
             >
@@ -1630,9 +1216,7 @@ export function Reportes() {
           )}
 
         {resultadoVentasFiltradas.length > 0 &&
-          (!imprimiendo ||
-            seleccionVista === "6" ||
-            seleccionVista === "todos") && (
+          (seleccionVista === "6" || seleccionVista === "todos") && (
             <Card
               className={`p-8 border-0 bg-card relative ${imprimiendo ? "border border-border shadow-none p-6 block overflow-visible" : "shadow-2xl overflow-hidden"} print:break-inside-avoid`}
             >
@@ -1678,9 +1262,7 @@ export function Reportes() {
           )}
 
         {resultadoTopProductos.length > 0 &&
-          (!imprimiendo ||
-            seleccionVista === "7" ||
-            seleccionVista === "todos") && (
+          (seleccionVista === "7" || seleccionVista === "todos") && (
             <Card
               className={`p-8 border-0 bg-card relative ${imprimiendo ? "border border-border shadow-none p-6 block overflow-visible" : "shadow-2xl overflow-hidden"} print:break-inside-avoid`}
             >
@@ -1726,9 +1308,7 @@ export function Reportes() {
           )}
 
         {resultadoGananciaProducto.length > 0 &&
-          (!imprimiendo ||
-            seleccionVista === "8" ||
-            seleccionVista === "todos") && (
+          (seleccionVista === "8" || seleccionVista === "todos") && (
             <Card
               className={`p-8 border-0 bg-card relative ${imprimiendo ? "border border-border shadow-none p-6 block overflow-visible" : "shadow-2xl overflow-hidden"} print:break-inside-avoid`}
             >
@@ -1774,9 +1354,7 @@ export function Reportes() {
           )}
 
         {resultadoComparacion.length > 0 &&
-          (!imprimiendo ||
-            seleccionVista === "9" ||
-            seleccionVista === "todos") && (
+          (seleccionVista === "9" || seleccionVista === "todos") && (
             <Card
               className={`p-8 border-0 bg-card relative ${imprimiendo ? "border border-border shadow-none p-6 block overflow-visible" : "shadow-2xl overflow-hidden"} print:break-inside-avoid`}
             >
@@ -1831,9 +1409,7 @@ export function Reportes() {
           )}
 
         {resultadoComprasFiltradas.length > 0 &&
-          (!imprimiendo ||
-            seleccionVista === "10" ||
-            seleccionVista === "todos") && (
+          (seleccionVista === "10" || seleccionVista === "todos") && (
             <Card
               className={`p-8 border-0 bg-card relative ${imprimiendo ? "border border-border shadow-none p-6 block overflow-visible" : "shadow-2xl overflow-hidden"} print:break-inside-avoid`}
             >
@@ -1881,9 +1457,7 @@ export function Reportes() {
           )}
 
         {resultadoSinMovimiento.length > 0 &&
-          (!imprimiendo ||
-            seleccionVista === "11" ||
-            seleccionVista === "todos") && (
+          (seleccionVista === "11" || seleccionVista === "todos") && (
             <Card
               className={`p-8 border-0 bg-card relative ${imprimiendo ? "border border-border shadow-none p-6 block overflow-visible" : "shadow-2xl overflow-hidden"} print:break-inside-avoid`}
             >

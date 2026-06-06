@@ -76,9 +76,10 @@ export function Productos() {
   // Mensajes de error inline para los modales de categoría
   const [categoryError, setCategoryError] = useState<string | null>(null);
   const [editCategoryError, setEditCategoryError] = useState<string | null>(null);
-  // NUEVO: Estados para proveedor y presentación
+  // NUEVO: Estados para proveedor, presentación e imagen
   const [newProductProveedor, setNewProductProveedor] = useState("");
   const [newProductPresentacion, setNewProductPresentacion] = useState("");
+  const [newProductImagen, setNewProductImagen] = useState("");
   const [proveedores, setProveedores] = useState<any[]>([]);
 
   // Estados para alertas
@@ -202,6 +203,22 @@ export function Productos() {
     setIsEditProductOpen(true);
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, isEdit: boolean) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        if (isEdit) {
+          setEditingProduct((prev: any) => ({ ...prev, imagen: base64String }));
+        } else {
+          setNewProductImagen(base64String);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSaveEdit = async () => {
     if (editingProduct) {
       try {
@@ -212,6 +229,7 @@ export function Productos() {
             ? parseInt(editingProduct.proveedorId)
             : null,
           presentacion: editingProduct.presentacion,
+          imagen: editingProduct.imagen || null,
         };
         const response = await api.patch(
           `/catalogo/productos/${editingProduct.id}/`,
@@ -237,6 +255,7 @@ export function Productos() {
         categoryId: parseInt(newProductCategory),
         proveedorId: newProductProveedor ? parseInt(newProductProveedor) : null,
         presentacion: newProductPresentacion,
+        imagen: newProductImagen || null,
       };
       await api.post("/catalogo/productos/", payload);
       fetchProducts();
@@ -246,6 +265,7 @@ export function Productos() {
       setNewProductCategory("2");
       setNewProductProveedor("");
       setNewProductPresentacion("");
+      setNewProductImagen("");
     } catch (error) {
       console.error("Error adding product:", error);
     }
@@ -525,7 +545,20 @@ export function Productos() {
                   searchedProducts.map((product) => (
                     <TableRow key={product.id} className="hover:bg-muted">
                       <TableCell className="font-medium text-foreground">
-                        {product.name}
+                        <div className="flex items-center gap-3">
+                          {product.imagen ? (
+                            <img
+                              src={product.imagen}
+                              alt={product.name}
+                              className="size-10 rounded-lg object-cover border shrink-0"
+                            />
+                          ) : (
+                            <div className="size-10 rounded-lg bg-muted border flex items-center justify-center text-muted-foreground shrink-0">
+                              <Package className="size-5" />
+                            </div>
+                          )}
+                          <span>{product.name}</span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-foreground">
                         {product.presentacion || "-"}
@@ -650,6 +683,39 @@ export function Productos() {
                 placeholder="Ej: 12 onzas, 3 litros, 500 ml"
                 className="mt-2"
               />
+            </div>
+            <div>
+              <Label className="text-foreground font-semibold">
+                Foto del Producto (Opcional)
+              </Label>
+              <div className="mt-2 flex items-center gap-4">
+                {newProductImagen ? (
+                  <div className="relative size-16 rounded-lg overflow-hidden border shrink-0">
+                    <img
+                      src={newProductImagen}
+                      alt="Vista previa"
+                      className="size-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setNewProductImagen("")}
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-0.5 hover:bg-red-600 transition-colors"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="size-16 rounded-lg bg-muted border flex items-center justify-center text-muted-foreground text-xs shrink-0">
+                    Sin foto
+                  </div>
+                )}
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageChange(e, false)}
+                  className="flex-1 cursor-pointer"
+                />
+              </div>
             </div>
             <Button
               onClick={handleAddProduct}
@@ -807,6 +873,39 @@ export function Productos() {
                 placeholder="Ej: 12 onzas, 3 litros, 500 ml"
                 className="mt-2"
               />
+            </div>
+            <div>
+              <Label className="text-foreground font-semibold">
+                Foto del Producto (Opcional)
+              </Label>
+              <div className="mt-2 flex items-center gap-4">
+                {editingProduct?.imagen ? (
+                  <div className="relative size-16 rounded-lg overflow-hidden border shrink-0">
+                    <img
+                      src={editingProduct.imagen}
+                      alt="Vista previa"
+                      className="size-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setEditingProduct({ ...editingProduct, imagen: null })}
+                      className="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-0.5 hover:bg-red-600 transition-colors"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="size-16 rounded-lg bg-muted border flex items-center justify-center text-muted-foreground text-xs shrink-0">
+                    Sin foto
+                  </div>
+                )}
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleImageChange(e, true)}
+                  className="flex-1 cursor-pointer"
+                />
+              </div>
             </div>
             <Button
               onClick={handleSaveEdit}

@@ -273,7 +273,7 @@ class DashboardStatsView(APIView):
         weekly_sales = ventas_semana.aggregate(total=Sum('Total'))['total'] or 0
         total_proveedores = Proveedor.objects.count()
 
-        # ── Productos con stock bajo (menos de 10 unidades disponibles) ────
+        # ── Productos con stock bajo (entre 10 y 20 unidades disponibles inclusive) ────
         # annotate(): Añade el campo calculado 'stock' a cada Producto del queryset.
         # Count con filter(): Equivale a COUNT(CASE WHEN Estado='Disponible' THEN 1 END) en SQL.
         # detalleentradainventario__inventarios: Navegación de FK a través de related_name.
@@ -282,7 +282,7 @@ class DashboardStatsView(APIView):
                 'detalleentradainventario__inventarios',
                 filter=Q(detalleentradainventario__inventarios__Estado='Disponible')
             )
-        ).filter(stock__lt=10).order_by('stock')[:5]
+        ).filter(stock__lte=20, stock__gte=10).order_by('stock')[:5]
 
         low_stock_items = [{
             "id": p.IdProducto,

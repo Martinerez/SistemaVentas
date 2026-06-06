@@ -141,6 +141,8 @@ class Producto(models.Model):
     # NUEVO: Tamaño o Presentación (Opcional)
     Presentacion = models.CharField(max_length=100, null=True, blank=True)
     Estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='Activo', null=False, blank=False)
+    # NUEVO: Imagen o Foto del Producto (Opcional, en base64 o URL)
+    Imagen = models.TextField(null=True, blank=True)
 
     class Meta:
         db_table = 'Producto'
