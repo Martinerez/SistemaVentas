@@ -112,8 +112,19 @@ export function DashboardLayout() {
         className={`p-6 border-b border-border ${mobile ? "flex items-center justify-between" : ""}`}
       >
         <div className="flex items-center gap-3">
-          <div className="size-10 bg-gradient-to-br from-slate-700 to-slate-900 rounded-lg flex items-center justify-center shadow-lg">
-            <Store className="size-6 text-white" />
+          <div className="size-10 flex items-center justify-center">
+            {/* Logo modo claro */}
+            <img
+              src="/src/assets/logo_claro.jpeg"
+              alt="Logo Bendición de Dios"
+              className="size-10 object-contain dark:hidden"
+            />
+            {/* Logo modo oscuro */}
+            <img
+              src="/src/assets/logo_oscuro.jpeg"
+              alt="Logo Bendición de Dios"
+              className="size-10 object-contain hidden dark:block"
+            />
           </div>
           <div>
             <h1 className="font-bold text-lg bg-gradient-to-r from-slate-800 to-slate-600 dark:from-slate-100 dark:to-slate-300 bg-clip-text text-transparent">
