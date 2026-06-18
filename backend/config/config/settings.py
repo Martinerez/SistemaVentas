@@ -79,7 +79,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'corsheaders'
+    'corsheaders',
     # Django REST Framework: Provee las clases base para la API (APIView,
     # ModelViewSet, serializers, permisos, paginación).
     'rest_framework',
@@ -113,8 +113,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    
-    
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -221,38 +219,21 @@ AUTH_USER_MODEL = 'usuarios.Usuario'
 # Permite que el servidor de desarrollo de Vite (puerto 5173) haga peticiones
 # al servidor Django (puerto 8000). En producción, esta lista debe actualizarse
 # con el dominio real del frontend (ej: https://mi-tienda.com).
-# No usar CORS_ALLOW_ALL_ORIGINS = True en producción.
-#CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://sistema-ventas-jv474oxcw-saturnitos.vercel.app",
-    "https://sistema-ventas-eight.vercel.app", # <-- ¡Agrega tu nueva URL de Vercel!
-]
 
+# NOTA: Activamos ALLOW_ALL para permitir cualquier URL dinámica de Vercel
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
-# En producción, agregar la URL del frontend de Railway dinámicamente.
-FRONTEND_URL = os.environ.get('FRONTEND_URL')
-if FRONTEND_URL:
-    # Como ya aceptamos todo arriba, esto no fallará, pero lo dejamos
-    # por compatibilidad con tu código anterior.
-    pass
-
 CSRF_TRUSTED_ORIGINS = [
     "https://sistema-ventas-jv474oxcw-saturnitos.vercel.app",
-    "https://sistema-ventas-eight.vercel.app" # <-- Agrégala aquí también
+    "https://sistema-ventas-eight.vercel.app"
 ]
-
-CORS_ORIGIN_REGEX_WHITELIST = [
-    r"^https://sistema-ventas-.*\.vercel\.app$",
-]
-CORS_ALLOW_CREDENTIALS = True
 
 # En producción, agregar la URL del frontend de Railway dinámicamente.
-FRONTEND_URL = os.environ.get('FRONTEND_URL')
-if FRONTEND_URL:
-    CORS_ALLOWED_ORIGINS.append(FRONTEND_URL)
+# (Se comenta porque al tener CORS_ALLOW_ALL_ORIGINS = True ya no hace falta el .append)
+# FRONTEND_URL = os.environ.get('FRONTEND_URL')
+# if FRONTEND_URL:
+#     pass
 
 
 # ══════════════════════════════════════════════════════════════════════════════
