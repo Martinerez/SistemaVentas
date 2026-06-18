@@ -27,7 +27,6 @@ import axios from "axios";
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "/api",
 });
-
 // ─── REQUEST INTERCEPTOR ─────────────────────────────────────────────────────
 /**
  * Interceptor de peticiones salientes.
@@ -115,12 +114,10 @@ api.interceptors.response.use(
         // petición NO sea interceptada por este mismo interceptor de respuesta.
         // Si usáramos `api.post(...)`, un 401 del refresh endpoint volvería a
         // disparar este código creando un bucle infinito.
-        const { data } = await axios.post(
-          `${import.meta.env.VITE_API_URL || "/api"}/token/refresh/`,
-          {
-          refresh: refreshToken,
-        });
-
+        
+     const { data } = await api.post("/token/refresh/", {
+      refresh: refreshToken,
+      });
         // Guardar el nuevo access token para peticiones futuras
         localStorage.setItem("accessToken", data.access);
         // Actualizar el header de la petición ORIGINAL que falló
