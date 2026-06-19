@@ -43,6 +43,10 @@ from .serializers import (
 )
 from auditoria.mixins import AuditoriaMixin, registrar_evento_manual
 
+def get_param_flexible(request, key_snake, key_camel):
+    """Busca el parámetro en snake_case o camelCase para evitar errores 400/500."""
+    return request.query_params.get(key_snake) or request.query_params.get(key_camel)
+
 
 class EntradaInventarioViewSet(AuditoriaMixin, viewsets.ModelViewSet):
     """
@@ -427,71 +431,56 @@ class DevolverStockView(APIView):
 # ─── REPORTES DE INVENTARIO (funciones sp_) ────────────────────────────────────
 
 class ReporteComprasFiltradasView(APIView):
-    """
-    Reporte de entradas de inventario (compras) filtradas por fecha y proveedor.
-
-    Delega la lógica de consulta a la función PostgreSQL sp_compras_filtradas(),
-    que realiza los JOINs y filtros en la BD de forma optimizada.
-
-    Query params:
-        inicio (str): Fecha de inicio en formato YYYY-MM-DD.
-        fin (str): Fecha de fin en formato YYYY-MM-DD.
-        proveedorId (str, opcional): ID del proveedor para filtrar.
-
-    Firma de la función SQL:
-        sp_compras_filtradas(inicio DATE, fin DATE, proveedor_id INT, p4 NULL, p5 NULL)
-        → Retorna una tabla con columnas: id_entrada, fecha_ingreso, nombre_proveedor, total_compra
-    """
     permission_classes = [IsAuthenticated, IsAdminRole]
 
     def get(self, request):
-        """
-        Ejecuta el reporte de compras filtradas.
-
-        NORMALIZACIÓN DE PROVEEDOR ID:
-            El parámetro 'proveedorId' puede llegar como:
-            - Una cadena numérica: "5" → se convierte a int(5)
-            - Una cadena vacía: "" → se normaliza a None (NULL en SQL)
-            - La cadena "null": "null" → se normaliza a None (NULL en SQL)
-            Sin esta normalización, PostgreSQL lanzaría un error de tipo al
-            intentar pasar "" como INTEGER.
-
-        Returns:
-            Response: Lista de compras en formato JSON, o error 400.
-        """
         inicio = request.query_params.get('inicio')
         fin = request.query_params.get('fin')
-        proveedor_id = request.query_params.get('proveedorId')
+        # FLEXIBILIDAD: Aceptamos proveedor_id o proveedorId
+        proveedor_id = get_param_flexible(request, 'proveedor_id', 'proveedorId')
 
         if not inicio or not fin:
             return Response({"error": "Faltan fechas de inicio y fin"}, status=400)
 
+        # Limpieza de fechas (por si llega con T)
+        inicio = inicio.split('T')[0] if 'T' in inicio else inicio
+        fin = fin.split('T')[0] if 'T' in fin else fin
+
         try:
             with connection.cursor() as cursor:
-                # Normalización: convierte el ID a entero o None para evitar
-                # errores de tipo en PostgreSQL al pasar strings vacíos.
-                p_id = int(proveedor_id) if proveedor_id and proveedor_id.strip() not in ["", "null"] else None
-
-                # Los parámetros 4 y 5 (None, None) son requeridos por la firma
-                # de la función SQL para mantener compatibilidad con versiones anteriores.
+                # Normalización: convierte a int o None
+                p_id = int(proveedor_id) if proveedor_id and str(proveedor_id).strip() not in ["", "null", "undefined"] else None
+                
                 cursor.execute(
                     "SELECT * FROM sp_compras_filtradas(%s, %s, %s, %s, %s)",
                     [inicio, fin, p_id, None, None]
                 )
-
-                # Normalización de claves a minúsculas para consistencia con el frontend React.
-                # El frontend espera claves snake_case en minúsculas, pero PostgreSQL
-                # puede devolver los nombres de columna en cualquier capitalización.
-                columns = [col[0] for col in cursor.description]
-                result = [{k.lower(): v for k, v in zip(columns, row)} for row in cursor.fetchall()]
+                columns = [col[0].lower() for col in cursor.description]
+                result = [dict(zip(columns, row)) for row in cursor.fetchall()]
             return Response(result)
         except Exception as e:
-            # Imprime el error real en la terminal de Django para facilitar debugging
-            print(f"Error en Reporte Compras: {str(e)}")
             return Response({"error": str(e)}, status=400)
 
-
 class ReporteProductosSinMovimientoView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+
+    def get(self, request):
+        dias = request.query_params.get('dias', 30)
+        try:
+            dias_int = int(dias)
+            fecha_fin = timezone.now().date()
+            fecha_inicio = fecha_fin - timedelta(days=dias_int)
+
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT * FROM sp_productos_sin_movimiento(%s, %s)",
+                    [fecha_inicio, fecha_fin]
+                )
+                columns = [col[0].lower() for col in cursor.description]
+                result = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            return Response(result)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
     """
     Reporte de productos que no han tenido ventas en los últimos N días.
 
