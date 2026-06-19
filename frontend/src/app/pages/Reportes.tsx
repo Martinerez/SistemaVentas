@@ -119,9 +119,9 @@ export function Reportes() {
   const [resultadoPerdidas, setResultadoPerdidas] = useState<any[]>([]);
   const [loadingPerdidas, setLoadingPerdidas] = useState(false);
 
-  const fechaFinCompleta = `${fechaFin}T23:59:59`;
-  const fechaFinBCompleta = `${fechaFinB}T23:59:59`;
-  const fechaFinACompleta = `${fechaFinA}T23:59:59`;
+  const fechaFinCompleta = `${fechaFin} 23:59:59`;
+  const fechaFinBCompleta = `${fechaFinB} 23:59:59`;
+  const fechaFinACompleta = `${fechaFinA} 23:59:59`;
 
   /**
    * seleccionVista: Controla qué reporte(s) incluir en PDF/Excel y el Modo Enfoque.

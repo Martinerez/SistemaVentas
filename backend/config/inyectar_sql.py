@@ -37,10 +37,10 @@ def ejecutar_script():
                 cursor.execute(SCRIPT_SQL)
                 
         # Si llega aquí sin errores, el commit se hace automáticamente
-        print("¡Éxito rotundo! Toda la lógica nativa ya está operativa en la nube. 🚀")
+        print("¡Éxito rotundo! Toda la lógica nativa ya está operativa en la nube. ")
         
     except Exception as e:
-        print(f"❌ Hubo un error al inyectar el SQL: {e}")
+        print(f"Hubo un error al inyectar el SQL: {e}")
 
 if __name__ == '__main__':
     ejecutar_script()
