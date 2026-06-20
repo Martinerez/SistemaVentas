@@ -115,13 +115,13 @@ export function DashboardLayout() {
           <div className="size-10 flex items-center justify-center">
             {/* Logo modo claro */}
             <img
-              src="/src/logo_claro.jpeg"
+              src="/logo_claro.jpeg"
               alt="Logo Bendición de Dios"
               className="size-10 object-contain dark:hidden"
             />
             {/* Logo modo oscuro */}
             <img
-              src="/src/logo_oscuro.jpeg"
+              src="/logo_oscuro.jpeg"
               alt="Logo Bendición de Dios"
               className="size-10 object-contain hidden dark:block"
             />
