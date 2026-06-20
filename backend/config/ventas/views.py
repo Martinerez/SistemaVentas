@@ -362,32 +362,65 @@ class ReportePivotVentasView(APIView):
     """
     Análisis mensual de ventas de un producto en un año (tabla pivot 12 columnas).
 
-    Llama a: reporte_mensual_producto_pivot(anio INT, productoId INT)
     Retorna una fila con columnas: producto, ene, feb, mar, abr, may, jun,
                                    jul, ago, sep, oct, nov, dic
 
-    DECISIÓN DE DISEÑO — Fila única vs. Múltiples filas:
-        La función SQL devuelve UNA SOLA FILA con los 12 meses como columnas
-        (formato pivot/crosstab). El frontend (Reportes.tsx) mapea directamente
+    DECISIÓN DE DISEÑO — Pivot inline con CASE WHEN:
+        Se reemplazó la dependencia de crosstab() (extensión tablefunc) por
+        un pivot directo con CASE WHEN. Esto garantiza compatibilidad con
+        cualquier instancia PostgreSQL (Railway, Render, etc.) sin requerir
+        extensiones adicionales. El frontend (Reportes.tsx) mapea directamente
         cada columna (d.ene, d.feb...) a una celda de la tabla visual.
-        Esto es más eficiente que devolver 12 filas (una por mes) porque
-        elimina la necesidad de transformar la respuesta en el cliente.
     """
     permission_classes = [IsAuthenticated, IsAdminRole]
+
+    EMPTY_ROW = {"producto": "Sin datos", "ene": 0, "feb": 0, "mar": 0, "abr": 0,
+                 "may": 0, "jun": 0, "jul": 0, "ago": 0, "sep": 0, "oct": 0, "nov": 0, "dic": 0}
 
     def get(self, request):
         anio = request.query_params.get('anio')
         prod_id = request.query_params.get('productoId') or request.query_params.get('producto_id')
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM reporte_mensual_producto_pivot(%s, %s)", [anio, prod_id])
-            columns = [col[0] for col in cursor.description]
-            row = cursor.fetchone()
-        # Normalizar claves a minúsculas para que el frontend lea d.ene, d.feb, etc.
-        if row:
-            return Response({k.lower(): v for k, v in zip(columns, row)})
-        # Fallback con ceros para que el frontend no crashee si no hay datos
-        return Response({"producto": "Sin datos", "ene": 0, "feb": 0, "mar": 0, "abr": 0,
-                         "may": 0, "jun": 0, "jul": 0, "ago": 0, "sep": 0, "oct": 0, "nov": 0, "dic": 0})
+
+        if not anio or not prod_id:
+            return Response({"error": "Faltan parámetros (anio o producto_id)"}, status=400)
+
+        try:
+            # Pivot inline: no depende de tablefunc/crosstab
+            query = """
+                SELECT
+                    p."Nombre"                                                          AS producto,
+                    COALESCE(SUM(CASE WHEN EXTRACT(MONTH FROM v."Fecha") =  1 THEN dv."PrecioVentaUnitario" END), 0) AS ene,
+                    COALESCE(SUM(CASE WHEN EXTRACT(MONTH FROM v."Fecha") =  2 THEN dv."PrecioVentaUnitario" END), 0) AS feb,
+                    COALESCE(SUM(CASE WHEN EXTRACT(MONTH FROM v."Fecha") =  3 THEN dv."PrecioVentaUnitario" END), 0) AS mar,
+                    COALESCE(SUM(CASE WHEN EXTRACT(MONTH FROM v."Fecha") =  4 THEN dv."PrecioVentaUnitario" END), 0) AS abr,
+                    COALESCE(SUM(CASE WHEN EXTRACT(MONTH FROM v."Fecha") =  5 THEN dv."PrecioVentaUnitario" END), 0) AS may,
+                    COALESCE(SUM(CASE WHEN EXTRACT(MONTH FROM v."Fecha") =  6 THEN dv."PrecioVentaUnitario" END), 0) AS jun,
+                    COALESCE(SUM(CASE WHEN EXTRACT(MONTH FROM v."Fecha") =  7 THEN dv."PrecioVentaUnitario" END), 0) AS jul,
+                    COALESCE(SUM(CASE WHEN EXTRACT(MONTH FROM v."Fecha") =  8 THEN dv."PrecioVentaUnitario" END), 0) AS ago,
+                    COALESCE(SUM(CASE WHEN EXTRACT(MONTH FROM v."Fecha") =  9 THEN dv."PrecioVentaUnitario" END), 0) AS sep,
+                    COALESCE(SUM(CASE WHEN EXTRACT(MONTH FROM v."Fecha") = 10 THEN dv."PrecioVentaUnitario" END), 0) AS oct,
+                    COALESCE(SUM(CASE WHEN EXTRACT(MONTH FROM v."Fecha") = 11 THEN dv."PrecioVentaUnitario" END), 0) AS nov,
+                    COALESCE(SUM(CASE WHEN EXTRACT(MONTH FROM v."Fecha") = 12 THEN dv."PrecioVentaUnitario" END), 0) AS dic
+                FROM "Producto" p
+                JOIN "DetalleEntradaInventario" dei ON p."IdProducto" = dei."IdProducto"
+                JOIN "Inventario" i ON dei."IdDetalleEntrada" = i."IdDetalleEntrada"
+                JOIN "DetalleVenta" dv ON i."IdInventario" = dv."IdInventario"
+                JOIN "Venta" v ON dv."IdVenta" = v."IdVenta"
+                WHERE EXTRACT(YEAR FROM v."Fecha") = %s
+                  AND p."IdProducto" = %s
+                GROUP BY p."Nombre"
+            """
+            with connection.cursor() as cursor:
+                cursor.execute(query, [int(anio), int(prod_id)])
+                columns = [col[0] for col in cursor.description]
+                row = cursor.fetchone()
+
+            if row:
+                return Response({k.lower(): v for k, v in zip(columns, row)})
+            return Response(self.EMPTY_ROW)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
 
 
 class ProductosPorProveedorView(APIView):
